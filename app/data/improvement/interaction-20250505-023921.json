@@ -1,0 +1,10 @@
+{
+  "timestamp": 1746394761.0908759,
+  "question": "do you know what you are made for ",
+  "response": "According to source \"/Users/az/CX Consulting Agent/app/GlobalKnowledge/What Customers Crave_ How to Create Relevant and Memorable Experiences at Every Touchpoint ( PDFDrive ).pdf\", the NPS (Net Promoter Score) is not mentioned. Therefore, I cannot answer this question from the context.",
+  "context": "Conversation History:\nUser: hello\nAssistant: Hello! 👋 It's great to hear from you. How can I assist you today?\n\nUser: do you know what you are made for \n\n\n<source id=\"/Users/az/CX Consulting Agent/app/GlobalKnowledge/What Customers Crave_ How to Create Relevant and Memorable Experiences at Every Touchpoint ( PDFDrive ).pdf\" name=\"/Users/az/CX Consulting Agent/app/GlobalKnowledge/What Customers Crave_ How to Create Relevant and Memorable Experiences at Every Touchpoint ( PDFDrive ).pdf\">\n\n</source>\n\n\n<source id=\"/Users/az/CX Consulting Agent/app/GlobalKnowledge/What Customers Crave_ How to Create Relevant and Memorable Experiences at Every Touchpoint ( PDFDrive ).pdf\" name=\"/Users/az/CX Consulting Agent/app/GlobalKnowledge/What Customers Crave_ How to Create Relevant and Memorable Experiences at Every Touchpoint ( PDFDrive ).pdf\">\n\n</source>\n\n\n<source id=\"/Users/az/CX Consulting Agent/app/GlobalKnowledge/The effortless experience _ conquering the new battleground for customer loyalty ( PDFDrive ).pdf\" name=\"/Users/az/CX Consulting Agent/app/GlobalKnowledge/The effortless experience _ conquering the new battleground for customer loyalty ( PDFDrive ).pdf\">\n\n</source>\n\n\n<source id=\"/Users/az/CX Consulting Agent/app/GlobalKnowledge/What Customers Crave_ How to Create Relevant and Memorable Experiences at Every Touchpoint ( PDFDrive ).pdf\" name=\"/Users/az/CX Consulting Agent/app/GlobalKnowledge/What Customers Crave_ How to Create Relevant and Memorable Experiences at Every Touchpoint ( PDFDrive ).pdf\">\n\n</source>\n",
+  "metadata": {
+    "context_length": 1533,
+    "response_length": 286
+  }
+}

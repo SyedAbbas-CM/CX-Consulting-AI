@@ -1,0 +1,10 @@
+{
+  "timestamp": 1746011180.279498,
+  "question": "hello",
+  "response": "<start_of_turn>model",
+  "context": "Conversation History:\nUser: hello\n\n\n[Document 1] Source: /Users/az/CX Consulting Agent/app/GlobalKnowledge/Mapping Experiences_ A Complete Guide to Creating Value through Journeys, Blueprints, and Diagrams ( PDFDrive ).pdf (Type: pdf)\n4.e He writes down my name and some code on the cup and hands it oﬀ to another barista who will make it when he is /f_inished with other orders.\n\nLack of personal space\nUnstructured\nFeedback\nConfusing\nInconsistent\nNot large work spaces Not large work spaces\nFurniture not ideal for computer work\nClosing time\nPeople watching\nCrowd conversation noise\nFree Wi-FiTasty drink\nFlavorable\nAppropriate temperature\nSofa chair is comfortable\nImpersonalFactory line\nGreeting\nFake\nAudible Sensations\nLoud\nAmbience\nAroma\nWorrying\nSecond guessing\nbaseline\nEnriched Experience\nStarbucks Experience Map\nPoached Experience\nQuick, convenient\nPolite\nAnnoyed about closing time\n\n\n[Document 2] Source: /Users/az/CX Consulting Agent/app/GlobalKnowledge/What Customers Crave_ How to Create Relevant and Memorable Experiences at Every Touchpoint ( PDFDrive ).pdf (Type: pdf)\nquite intentionally asked for your name. Seems like a pretty small thing, but as we have learned, it’s the subtleties in human connection that drive amaz- ing human experiences. The las t touchpoint at Starbucks is hearing someone say the most beautiful words in the universe: your name. Studies show\n\nTHE PERFECT LAST TOUCHPOINT MOMENT \n197\nthat the engagement power of even strangers using your name is \nincredible, and Starbucks leaves you with t",
+  "metadata": {
+    "context_length": 1536,
+    "response_length": 20
+  }
+}

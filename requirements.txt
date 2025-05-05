@@ -1,0 +1,68 @@
+# Core dependencies
+fastapi>=0.104.0
+uvicorn>=0.23.2
+pydantic>=2.4.2
+python-dotenv>=1.0.0
+requests>=2.31.0
+aiohttp>=3.8.6
+httpx>=0.25.1
+
+# LLM dependencies
+vllm>=0.2.0
+transformers>=4.36.0
+torch>=2.0.0
+tokenizers>=0.15.0
+accelerate>=0.25.0
+
+# Embedding and vector store dependencies
+sentence-transformers>=2.2.2
+faiss-cpu>=1.7.4
+chromadb>=0.4.18
+
+# ONNX acceleration (optional)
+onnx>=1.14.0
+onnxruntime>=1.15.1
+# For Apple Silicon optimized version: onnxruntime-silicon>=1.15.0
+
+# Document processing
+langchain>=0.0.310
+langchain-community>=0.0.9
+langchainhub>=0.1.14
+bs4>=0.0.1
+pypdf>=3.17.1
+pdfminer.six>=20221105
+unstructured>=0.10.30
+tiktoken>=0.5.1
+
+# Data handling
+numpy>=1.24.0
+pandas>=2.0.0
+pyyaml>=6.0.1
+jsonschema>=4.19.1
+
+# Optional: Memory management with Redis
+redis>=5.0.1
+fakeredis>=2.20.0
+
+# Optional: Monitoring and telemetry
+prometheus-fastapi-instrumentator>=6.1.0
+opentelemetry-api>=1.20.0
+opentelemetry-sdk>=1.20.0
+opentelemetry-exporter-otlp>=1.20.0
+
+# Utilities
+tqdm>=4.66.1
+loguru>=0.7.2
+
+# Testing 
+pytest>=7.4.3
+pytest-asyncio>=0.21.1
+
+# Authentication dependencies
+python-jose>=3.3.0  # For JWT tokens
+passlib>=1.7.4      # For password hashing
+bcrypt>=4.0.1       # For bcrypt algorithm
+python-multipart>=0.0.6  # For form data parsing
+
+# Add tenacity for retry logic
+tenacity 

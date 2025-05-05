@@ -1,0 +1,92 @@
+# Environments
+.env
+.env.*
+!.env.example
+
+# Python cache and virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+venv/
+.venv/
+env/
+.env/
+ENV/
+
+# Language model files (GGUF)
+models/*.gguf
+app/models/*.gguf # Also ignore if models are put inside app/
+
+# Embedding model cache (Handled by system cache, but be explicit if needed)
+# Typically ~/.cache/huggingface/hub or ~/.cache/torch - DO NOT add system paths here.
+# If sentence-transformers caches locally (unlikely), add that path.
+
+# Local Vector Store Data (ChromaDB)
+app/data/vectorstore/
+
+# Chunked Documents (Intermediate files)
+app/data/chunked/
+
+# Project Data (User-specific, if sensitive or large)
+app/data/projects/
+
+# Source Documents (If copies are stored in data/, not just GlobalKnowledge/)
+# app/data/documents/ # Uncomment if you store copies here
+
+# Logs
+*.log
+logs/
+log/ # Add root log directory
+*.log.*
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+users.db # Be explicit about the auth DB
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE settings/cache
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Node / Frontend dependencies
+node_modules/ # Ignore root node_modules
+app/frontend/cx-consulting-ai-3/node_modules/
+app/frontend/cx-consulting-ai-3/.next/
+app/frontend/cx-consulting-ai-3/out/
+app/frontend/cx-consulting-ai-3/build/
+app/frontend/cx-consulting-ai-3/.DS_Store
+app/frontend/cx-consulting-ai-3/*.log
+app/frontend/cx-consulting-ai-3/npm-debug.log*
+app/frontend/cx-consulting-ai-3/yarn-debug.log*
+app/frontend/cx-consulting-ai-3/yarn-error.log*
+app/frontend/cx-consulting-ai-3/.pnp/
+app/frontend/cx-consulting-ai-3/.pnp.js
+
+# Test artifacts
+app/tests/__pycache__/
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# Add other specific large files or temp directories if needed 
+node_modules
