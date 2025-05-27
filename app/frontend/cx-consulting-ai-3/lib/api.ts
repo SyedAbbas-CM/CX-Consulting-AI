@@ -3,8 +3,8 @@
  */
 
 // Use environment variable if available, otherwise default to localhost
-const API_BASE_URL = typeof window !== 'undefined' && process?.env?.NEXT_PUBLIC_API_URL 
-  ? process.env.NEXT_PUBLIC_API_URL 
+const API_BASE_URL = typeof window !== 'undefined' && process?.env?.NEXT_PUBLIC_API_URL
+  ? process.env.NEXT_PUBLIC_API_URL
   : 'http://localhost:8000';
 
 // Types
@@ -59,7 +59,7 @@ export interface AuthResponse {
 export function getAuthHeaders(contentType = 'application/json') {
   const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
   const headers: Record<string, string> = {};
-  
+
   if (contentType !== 'multipart/form-data') {
     headers['Content-Type'] = contentType;
   }
@@ -165,7 +165,7 @@ export async function askQuestion(query: string, conversationId?: string): Promi
 export async function uploadDocument(file: File, projectId?: string): Promise<DocumentUploadResponse> {
   const formData = new FormData();
   formData.append('file', file);
-  
+
   // Add project ID if provided
   if (projectId) {
     formData.append('project_id', projectId);
@@ -319,4 +319,4 @@ export async function checkHealth(): Promise<{ status: string; model: string; ve
   }
 
   return response.json();
-} 
+}

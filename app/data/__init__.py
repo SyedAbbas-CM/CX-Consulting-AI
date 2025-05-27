@@ -1,2 +1,2 @@
 # app/data/__init__.py
-# Initialize the data package 
+# Initialize the data package

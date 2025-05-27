@@ -1,0 +1,35 @@
+# CX Interview Discussion Guide — {interview_type}
+
+## OVERVIEW
+* **Purpose:** {purpose}
+* **Participant profile:** {participant_profile}
+* **Duration:** {duration}
+* **Interviewer(s):** {interviewer_names}
+* **Date:** {date}
+
+## PRE-INTERVIEW PREPARATION
+### Background Research
+{background_bullets}
+
+### Materials Needed
+{materials_list}
+
+## INTRODUCTION SCRIPT
+"Hello {name}, thank you for taking the time …"
+{intro_tips}
+
+## WARM-UP QUESTIONS
+{warm_up_questions}
+
+## CORE DISCUSSION TOPICS
+{topic_blocks}
+
+## WRAP-UP & CLOSING
+{wrap_up_script}
+
+## POST-INTERVIEW NOTES
+{post_interview_sections}
+
+---
+
+*Guide prepared by {consulting_firm} for {project_name}.  Last updated {current_date}.*

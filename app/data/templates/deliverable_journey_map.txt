@@ -1,0 +1,22 @@
+# Customer Journey Map — {persona} / {scenario}
+
+## OVERVIEW
+* **Persona:** {persona}
+* **Scenario:** {scenario}
+* **Goal:** {customer_goal}
+* **Touchpoints covered:** {touchpoint_list}
+
+## STAGE-BY-STAGE
+| Stage | Customer Actions | Thoughts / Feelings | CX Pain Points | Opportunities |
+|-------|------------------|---------------------|----------------|---------------|
+{journey_rows}
+
+## MOMENTS THAT MATTER
+{moments_that_matter_list}
+
+## QUICK-WIN RECOMMENDATIONS
+{quick_wins_list}
+
+---
+
+*Journey map created by {consulting_firm}, {current_date}.*

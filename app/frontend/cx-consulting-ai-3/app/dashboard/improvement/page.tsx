@@ -21,21 +21,21 @@ export default function ModelImprovementPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [selectedInteraction, setSelectedInteraction] = useState<Interaction | null>(null)
   const pageSize = 10
-  
+
   const fetchInteractions = async () => {
     setLoading(true)
     setError("")
-    
+
     try {
       // This endpoint would need to be implemented in the backend
       const response = await fetch('/api/improvement/interactions')
-      
+
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`)
       }
-      
+
       const data = await response.json()
-      
+
       // Format the interactions
       const formattedInteractions: Interaction[] = data.interactions.map((item: any) => ({
         id: item.id,
@@ -46,12 +46,12 @@ export default function ModelImprovementPage() {
         contextLength: item.metadata.context_length,
         responseLength: item.metadata.response_length
       }))
-      
+
       setInteractions(formattedInteractions)
     } catch (error) {
       console.error('Error fetching interactions:', error)
       setError('Failed to load interactions. This feature may not be fully implemented yet.')
-      
+
       // For development, create some mock data
       const mockInteractions: Interaction[] = Array.from({ length: 15 }, (_, i) => ({
         id: `interaction-${i + 1}`,
@@ -62,23 +62,23 @@ export default function ModelImprovementPage() {
         contextLength: 500,
         responseLength: 200
       }))
-      
+
       setInteractions(mockInteractions)
     } finally {
       setLoading(false)
     }
   }
-  
+
   useEffect(() => {
     fetchInteractions()
   }, [])
-  
+
   const totalPages = Math.ceil(interactions.length / pageSize)
   const paginatedInteractions = interactions.slice(
     (currentPage - 1) * pageSize,
     currentPage * pageSize
   )
-  
+
   const downloadInteraction = (interaction: Interaction) => {
     try {
       const data = {
@@ -92,7 +92,7 @@ export default function ModelImprovementPage() {
           responseLength: interaction.responseLength
         }
       }
-      
+
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -106,7 +106,7 @@ export default function ModelImprovementPage() {
       console.error('Error downloading interaction:', error)
     }
   }
-  
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -116,18 +116,18 @@ export default function ModelImprovementPage() {
           Refresh
         </Button>
       </div>
-      
+
       <p className="text-muted-foreground">
         This page shows saved chat interactions that can be used for model training and improvement.
         Each interaction includes the user's question, AI response, and the context used for generation.
       </p>
-      
+
       {error && (
         <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-4 rounded-md">
           {error}
         </div>
       )}
-      
+
       {loading ? (
         <div className="flex justify-center p-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -153,9 +153,9 @@ export default function ModelImprovementPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">{interaction.responseLength} chars</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={(e) => {
                           e.stopPropagation();
                           downloadInteraction(interaction);
@@ -169,7 +169,7 @@ export default function ModelImprovementPage() {
               </tbody>
             </table>
           </div>
-          
+
           {totalPages > 1 && (
             <div className="flex items-center justify-between">
               <div className="text-sm text-muted-foreground">
@@ -197,42 +197,42 @@ export default function ModelImprovementPage() {
           )}
         </div>
       )}
-      
+
       {selectedInteraction && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-card rounded-lg shadow-lg max-w-4xl w-full max-h-[80vh] overflow-auto p-6 space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold">Interaction Details</h2>
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setSelectedInteraction(null)}
               >
                 ✕
               </Button>
             </div>
-            
+
             <div className="space-y-4">
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground mb-1">Timestamp</h3>
                 <p>{selectedInteraction.timestamp}</p>
               </div>
-              
+
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground mb-1">Question</h3>
                 <div className="p-3 bg-muted rounded-md">{selectedInteraction.question}</div>
               </div>
-              
+
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground mb-1">Response</h3>
                 <div className="p-3 bg-muted rounded-md whitespace-pre-wrap">{selectedInteraction.response}</div>
               </div>
-              
+
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground mb-1">Context Used</h3>
                 <div className="p-3 bg-muted rounded-md max-h-[200px] overflow-auto text-sm">{selectedInteraction.context}</div>
               </div>
-              
+
               <div className="flex justify-end">
                 <Button onClick={() => downloadInteraction(selectedInteraction)}>
                   <Download size={16} className="mr-2" />
@@ -245,4 +245,4 @@ export default function ModelImprovementPage() {
       )}
     </div>
   )
-} 
+}

@@ -1,0 +1,10 @@
+{
+  "timestamp": 1746706713.926959,
+  "question": "i want to know what you can do",
+  "response": "Sorry, I encountered an error while processing your request.",
+  "context": "No relevant context found.",
+  "metadata": {
+    "context_length": 26,
+    "response_length": 60
+  }
+}

@@ -59,4 +59,4 @@ python_files = "test_*.py"
 python_functions = "test_*"
 
 [tool.setuptools]
-package-dir = {"" = "app"} 
+package-dir = {"" = "app"}

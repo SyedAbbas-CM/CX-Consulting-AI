@@ -51,4 +51,4 @@ models/google/gemma-7b-it
 
 ### Ollama Backend
 
-No local files needed - models are managed by Ollama directly. 
+No local files needed - models are managed by Ollama directly.

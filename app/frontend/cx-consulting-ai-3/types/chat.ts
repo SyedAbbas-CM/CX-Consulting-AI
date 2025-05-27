@@ -18,8 +18,8 @@ export interface ChatCreateResponse {
 }
 
 export interface ChatSummaryResponse {
-    id: string; // Or number
-    title: string; // Often the first user message or a generated summary
+    chat_id: string; // Or number
+    name: string; // Often the first user message or a generated summary
     created_at: string;
     last_updated_at: string;
     project_id: string | number;
@@ -38,4 +38,4 @@ export interface RefinementResponse {
     chat_id: string | number;
     message_id?: string | number;
     // Include other relevant data, like tokens used, etc.
-} 
+}

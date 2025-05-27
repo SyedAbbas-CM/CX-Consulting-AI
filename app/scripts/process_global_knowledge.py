@@ -27,11 +27,11 @@ from __future__ import annotations
 import argparse
 import concurrent.futures as cf
 import hashlib
+import json
 import logging
 import os
 import sys
 import time
-import json
 from pathlib import Path
 from typing import List, Set
 
@@ -41,6 +41,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from dotenv import load_dotenv  # noqa: E402
+
 from app.services.document_service import DocumentService  # noqa: E402
 from app.services.rag_engine import RagEngine  # noqa: E402
 
@@ -51,7 +52,9 @@ DATA_DIR = Path(os.getenv("DATA_DIR", PROJECT_ROOT / "app/data"))
 DOCUMENTS_DIR = Path(os.getenv("DOCUMENTS_DIR", DATA_DIR / "documents"))
 CHUNK_DIR = Path(os.getenv("CHUNK_DIR", DATA_DIR / "chunked"))
 VECTOR_DIR = Path(os.getenv("VECTOR_DIR", DATA_DIR / "vectorstore"))
-GLOBAL_KNOWLEDGE_DIR = Path(os.getenv("GLOBAL_KNOWLEDGE_DIR", PROJECT_ROOT / "app/GlobalKnowledge"))
+GLOBAL_KNOWLEDGE_DIR = Path(
+    os.getenv("GLOBAL_KNOWLEDGE_DIR", PROJECT_ROOT / "app/GlobalKnowledge")
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -60,6 +63,7 @@ logging.basicConfig(
 logger = logging.getLogger("global_knowledge_processor")
 
 # -----------------------------------------------------------------------------
+
 
 def sha256_file(path: Path) -> str:
     """Return SHA‑256 hexdigest for a file (streamed)."""
@@ -86,9 +90,11 @@ class KnowledgeIngestor:
             self.use_rag_engine = True
             logger.info("RagEngine initialised ✅")
         except Exception as exc:  # noqa: BLE001
-            logger.warning("Could not init RagEngine: %s — falling back to DocumentService", exc)
+            logger.warning(
+                "Could not init RagEngine: %s — falling back to DocumentService", exc
+            )
             self.use_rag_engine = False
-        
+
         # Get existing document hashes from chunk files
         self._existing_hashes: Set[str] = self._get_existing_hashes()
         logger.info(f"Found {len(self._existing_hashes)} existing document hashes")
@@ -97,21 +103,21 @@ class KnowledgeIngestor:
         """Get hashes of all existing documents from chunk files."""
         existing_hashes = set()
         chunk_dir = Path(CHUNK_DIR)
-        
+
         if not chunk_dir.exists():
             logger.warning(f"Chunk directory {chunk_dir} does not exist")
             return existing_hashes
-            
+
         for chunk_file in chunk_dir.glob("*.json"):
             try:
-                with open(chunk_file, 'r') as f:
+                with open(chunk_file, "r") as f:
                     chunk_data = json.load(f)
-                    if 'metadata' in chunk_data and 'hash' in chunk_data['metadata']:
-                        existing_hashes.add(chunk_data['metadata']['hash'])
+                    if "metadata" in chunk_data and "hash" in chunk_data["metadata"]:
+                        existing_hashes.add(chunk_data["metadata"]["hash"])
             except Exception as e:
                 logger.warning(f"Error reading chunk file {chunk_file}: {e}")
                 continue
-                
+
         return existing_hashes
 
     # ---------------------------------------------------------------------
@@ -155,23 +161,41 @@ class KnowledgeIngestor:
     def run(self) -> None:
         files: List[Path] = list(GLOBAL_KNOWLEDGE_DIR.glob(f"*.{self.file_ext}"))
         if not files:
-            logger.warning("No *.%s files found in %s", self.file_ext, GLOBAL_KNOWLEDGE_DIR)
+            logger.warning(
+                "No *.%s files found in %s", self.file_ext, GLOBAL_KNOWLEDGE_DIR
+            )
             return
         logger.info("Found %d %s files", len(files), self.file_ext)
         start = time.time()
         with cf.ThreadPoolExecutor(max_workers=self.workers) as pool:
             list(pool.map(self.ingest_one, files))
         elapsed = time.time() - start
-        logger.info("Ingestion complete in %.2fs | Total docs in vector store: %d", 
-                   elapsed, self.doc_service.get_document_count())
+        logger.info(
+            "Ingestion complete in %.2fs | Total docs in vector store: %d",
+            elapsed,
+            self.doc_service.get_document_count(),
+        )
 
 
 # -----------------------------------------------------------------------------
 
+
 def cli() -> None:
-    parser = argparse.ArgumentParser(description="Ingest global knowledge PDFs into vector store")
-    parser.add_argument("--workers", type=int, default=int(os.getenv("WORKERS", "4")), help="Thread workers (default: 4)")
-    parser.add_argument("--ext", type=str, default=os.getenv("FILE_EXT", "pdf"), help="File extension to ingest (default: pdf)")
+    parser = argparse.ArgumentParser(
+        description="Ingest global knowledge PDFs into vector store"
+    )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=int(os.getenv("WORKERS", "4")),
+        help="Thread workers (default: 4)",
+    )
+    parser.add_argument(
+        "--ext",
+        type=str,
+        default=os.getenv("FILE_EXT", "pdf"),
+        help="File extension to ingest (default: pdf)",
+    )
     args = parser.parse_args()
 
     ingestor = KnowledgeIngestor(workers=args.workers, file_ext=args.ext)

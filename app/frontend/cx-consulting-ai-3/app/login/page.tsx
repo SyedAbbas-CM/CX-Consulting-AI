@@ -14,7 +14,7 @@ import { useAuth } from "@/context/auth-context"
 // Component to handle search params
 function SearchParamsHandler({ onRegistered }: { onRegistered: (value: boolean) => void }) {
   const searchParams = useSearchParams()
-  
+
   useEffect(() => {
     // Check if redirected from registration
     const registered = searchParams.get("registered")
@@ -22,7 +22,7 @@ function SearchParamsHandler({ onRegistered }: { onRegistered: (value: boolean) 
       onRegistered(true)
     }
   }, [searchParams, onRegistered])
-  
+
   return null
 }
 
@@ -51,15 +51,15 @@ export default function LoginPage() {
     e.preventDefault()
     setError("")
     setSuccessMessage("")
-    
+
     if (!email || !password) {
       setError("Please fill in all fields")
       return
     }
-    
+
     try {
       const success = await login(email, password)
-      
+
       if (success) {
         router.push("/dashboard")
       } else {
@@ -78,7 +78,7 @@ export default function LoginPage() {
       <Suspense fallback={null}>
         <SearchParamsHandler onRegistered={handleRegistered} />
       </Suspense>
-      
+
       {/* Header */}
       <header className={`border-b ${theme === "dark" ? "border-gray-800" : "border-gray-200"} py-3 px-6`}>
         <div className="flex items-center justify-between">
@@ -111,7 +111,7 @@ export default function LoginPage() {
               {successMessage}
             </div>
           )}
-          
+
           {error && (
             <div className="bg-red-50 text-red-700 p-3 rounded-md mb-4">
               {error}

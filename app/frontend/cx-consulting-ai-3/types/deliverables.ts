@@ -34,4 +34,4 @@ export interface DeliverableResponse {
   project_id?: string | null;
   document_id?: string | null;
   processing_time: number;
-} 
+}

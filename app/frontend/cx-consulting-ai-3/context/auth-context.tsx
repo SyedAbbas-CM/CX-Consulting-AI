@@ -63,10 +63,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true)
     try {
       const authResponse = await api.login(email, password)
-      
+
       if (authResponse && authResponse.access_token) {
         localStorage.setItem("authToken", authResponse.access_token)
-        
+
         // Get user data
         const userData = await api.getCurrentUser()
         setUser({
@@ -76,7 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           full_name: userData.full_name,
           disabled: userData.disabled,
         })
-        
+
         setIsAuthenticated(true)
         setIsLoading(false)
         return true
@@ -146,4 +146,4 @@ export function useAuth() {
     throw new Error("useAuth must be used within an AuthProvider")
   }
   return context
-} 
+}

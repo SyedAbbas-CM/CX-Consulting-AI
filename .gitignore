@@ -88,5 +88,5 @@ app/tests/__pycache__/
 htmlcov/
 coverage.xml
 
-# Add other specific large files or temp directories if needed 
+# Add other specific large files or temp directories if needed
 node_modules

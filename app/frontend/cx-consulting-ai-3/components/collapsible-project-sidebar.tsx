@@ -1,13 +1,6 @@
-// CollapsibleProjectSidebar – rewritten to eliminate TypeScript & JSX errors
-// Assumptions:
-// 1. useProjectStore exposes removeProject
-// 2. useChatStore exposes clearChats (to empty the list for a project) –
-//    if that action doesn't exist, simply omit the call.
-// 3. apiClient exports deleteProject (mirroring createProject / createChat / deleteChat)
-
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Folder,
   PlusCircle,
@@ -57,25 +50,21 @@ interface CollapsibleProjectSidebarProps {
   theme: "light" | "dark";
 }
 
-export default function CollapsibleProjectSidebar({
-  theme,
-}: CollapsibleProjectSidebarProps) {
-  // layout – collapsed/expanded
+export default function CollapsibleProjectSidebar({ theme }: CollapsibleProjectSidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
-  /** ------------------------------------------------------------------
-   *  Zustand stores
-   * ----------------------------------------------------------------*/
+  // Project store
   const {
     projects,
     currentProjectId,
     isLoadingProjects,
     fetchProjects,
     addProject,
-    removeProject, // assumed to exist
+    removeProject,
     setCurrentProjectId,
   } = useProjectStore();
 
+  // Chat store
   const {
     chats,
     currentChatId,
@@ -83,235 +72,125 @@ export default function CollapsibleProjectSidebar({
     fetchChats,
     addChat,
     removeChat,
-    clearChats, // optional; fall‑back handled below
+    clearChats,
     setCurrentChatId,
     setProjectId: setChatStoreProjectId,
   } = useChatStore();
 
-  /** ------------------------------------------------------------------
-   *  Local state (dialog & loading flags)
-   * ----------------------------------------------------------------*/
   const [isCreatingProject, setIsCreatingProject] = useState(false);
   const [isCreatingChat, setIsCreatingChat] = useState(false);
   const [deletingChatId, setDeletingChatId] = useState<string | null>(null);
   const [showNewProjectDialog, setShowNewProjectDialog] = useState(false);
-  const [newProjectData, setNewProjectData] = useState<
-    Partial<ProjectCreateRequest>
-  >({});
+  const [newProjectData, setNewProjectData] = useState<Partial<ProjectCreateRequest>>({});
   const { toast } = useToast();
 
-  /** ------------------------------------------------------------------
-   *  Effects – initialise projects & chats
-   * ----------------------------------------------------------------*/
+  // Load projects on mount
   useEffect(() => {
     fetchProjects();
   }, [fetchProjects]);
 
+  // When project changes, update chat store and load its chats
   useEffect(() => {
     setChatStoreProjectId(currentProjectId);
     if (currentProjectId) {
       fetchChats(currentProjectId);
+    } else {
+      clearChats?.();
     }
-  }, [currentProjectId, fetchChats, setChatStoreProjectId]);
+  }, [currentProjectId, fetchChats, setChatStoreProjectId, clearChats]);
 
-  /** ------------------------------------------------------------------
-   *  Handlers – create project / chat / delete chat / delete project
-   * ----------------------------------------------------------------*/
+  // Create a new project
   const handleNewProjectSubmit = async () => {
     if (!newProjectData.name?.trim()) {
-      toast({
-        variant: "destructive",
-        title: "Missing Information",
-        description: "Please enter a project name.",
-      });
+      toast({ variant: "destructive", title: "Missing Information", description: "Please enter a project name." });
       return;
     }
-
     setIsCreatingProject(true);
     try {
-      const newProject = await createProject({
-        name: newProjectData.name.trim(),
-      } as ProjectCreateRequest);
-
-      addProject(newProject);
-      setCurrentProjectId(newProject.id);
+      const project = await createProject({ name: newProjectData.name.trim() } as ProjectCreateRequest);
+      addProject(project);
+      setCurrentProjectId(project.id);
       setShowNewProjectDialog(false);
       setNewProjectData({});
-      toast({
-        title: "Project Created",
-        description: `Project "${newProject.name}" created successfully.`,
-      });
+      toast({ title: "Project Created", description: `"${project.name}" created.` });
     } catch (err: any) {
-      const msg = err?.errorData?.detail || err?.message || "Unknown error.";
-      toast({
-        variant: "destructive",
-        title: "Creation Failed",
-        description: msg,
-      });
+      toast({ variant: "destructive", title: "Creation Failed", description: err?.errorData?.detail || err?.message });
     } finally {
       setIsCreatingProject(false);
     }
   };
 
+  // Create a new chat under the current project
   const handleNewChat = async () => {
-    console.log("handleNewChat triggered. Current Project ID:", currentProjectId);
     if (!currentProjectId) {
-      console.log("No current project ID, showing toast.");
-      toast({
-        variant: "destructive",
-        title: "No Project Selected",
-        description: "Select a project first.",
-      });
+      toast({ variant: "destructive", title: "No Project Selected", description: "Please select a project first." });
       return;
     }
-    console.log("Setting isCreatingChat to true");
     setIsCreatingChat(true);
     try {
-      console.log(`Calling createChat API for project: ${currentProjectId}`);
-      const newChat = await createChat(currentProjectId);
-      console.log("createChat API response:", newChat);
-      if (!newChat || !newChat.id) { // Check if response is valid
-          console.error("Invalid response received from createChat API", newChat);
-          throw new Error("Received invalid data when creating chat.");
-      }
-      console.log(`Adding chat to store: ${JSON.stringify(newChat)}`);
-      addChat(newChat);
-      console.log(`Setting current chat ID in store: ${newChat.id}`);
-      setCurrentChatId(newChat.id);
-      console.log("handleNewChat completed successfully.");
+      const chat = await createChat(currentProjectId);
+      addChat(chat);
+      setCurrentChatId(chat.chat_id);
     } catch (err: any) {
-      console.error("Error in handleNewChat:", err);
-      const msg = err?.errorData?.detail || err?.message || "Unknown error.";
-      toast({
-        variant: "destructive",
-        title: "Chat Creation Failed",
-        description: msg,
-      });
+      toast({ variant: "destructive", title: "Chat Creation Failed", description: err?.errorData?.detail || err?.message });
     } finally {
-      console.log("Setting isCreatingChat to false");
       setIsCreatingChat(false);
     }
   };
 
-  const handleDeleteChat = async (chatId: string, chatTitle: string) => {
-    if (deletingChatId) return;
-    if (!currentProjectId) {
-      toast({
-        variant: "destructive",
-        title: "Cannot Delete Chat",
-        description: "No project is currently selected.",
-      });
-      return;
-    }
-    if (!window.confirm(`Delete chat "${chatTitle}"?`)) return;
-
+  // Delete a chat
+  const handleDeleteChat = async (chatId: string) => {
+    if (!currentProjectId || deletingChatId) return;
+    if (!window.confirm("Delete this chat?")) return;
     setDeletingChatId(chatId);
     try {
       await deleteChat(currentProjectId, chatId);
       removeChat(chatId);
     } catch (err: any) {
-      const msg = err?.errorData?.detail || err?.message || "Unknown error.";
-      toast({
-        variant: "destructive",
-        title: "Deletion Failed",
-        description: msg,
-      });
+      toast({ variant: "destructive", title: "Deletion Failed", description: err?.errorData?.detail || err?.message });
     } finally {
       setDeletingChatId(null);
     }
   };
 
-  const handleDeleteProject = async (projectId: string, projectName: string) => {
+  // Delete a project and its chats
+  const handleDeleteProject = async (projId: string, name: string) => {
+    if (!window.confirm(`Delete project "${name}" and all its chats?`)) return;
     try {
-      await deleteProject(projectId);
-      removeProject(projectId);
-      toast({
-        title: "Project Deleted",
-        description: `Project "${projectName}" removed.`,
-      });
-
-      let shouldRefetchProjects = true;
-
-      if (currentProjectId === projectId) {
+      await deleteProject(projId);
+      removeProject(projId);
+      if (currentProjectId === projId) {
         setCurrentProjectId(null);
-        // clear local chats since the project is gone
         clearChats?.();
-        shouldRefetchProjects = false; // fetchProjects will be triggered by setCurrentProjectId(null) -> useEffect
       }
-
-      // Explicitly refetch projects if the deleted one wasn't selected
-      // If it WAS selected, the useEffect watching currentProjectId handles it.
-      if (shouldRefetchProjects) {
-           await fetchProjects();
-      }
-
+      toast({ title: "Project Deleted", description: `"${name}" removed.` });
     } catch (err: any) {
-      const msg = err?.errorData?.detail || err?.message || "Unknown error.";
-      toast({
-        variant: "destructive",
-        title: "Deletion Failed",
-        description: msg,
-      });
+      toast({ variant: "destructive", title: "Deletion Failed", description: err?.errorData?.detail || err?.message });
     }
   };
 
-  /** ------------------------------------------------------------------
-   *  Render helpers
-   * ----------------------------------------------------------------*/
+  // Render the list of projects
   const renderProjects = () => {
-    if (isLoadingProjects) {
-      return (
-        <p
-          className={`text-center text-xs py-4 ${
-            theme === "dark" ? "text-gray-500" : "text-gray-400"
-          }`}
-        >
-          Loading projects…
-        </p>
-      );
-    }
-
-    if (projects.length === 0) {
-      return (
-        <p
-          className={`text-xs text-center py-2 ${
-            theme === "dark" ? "text-gray-500" : "text-gray-400"
-          }`}
-        >
-          (No projects)
-        </p>
-      );
-    }
-
-    // Filter out any projects without a valid ID before mapping
-    const validProjects = projects.filter(p => p && p.id);
-
-    return validProjects.map((project) => (
-      <AlertDialog key={String(project.id)}>
+    if (isLoadingProjects) return <p className="py-2 text-center text-xs text-gray-500">Loading projects…</p>;
+    if (!projects.length) return <p className="py-2 text-center text-xs text-gray-500">(No projects)</p>;
+    return projects.map((p) => (
+      <AlertDialog key={p.id}>
         <div
-          onClick={() => setCurrentProjectId(project.id)}
-          className={`group flex items-center justify-between rounded-md px-2 py-1.5 text-sm cursor-pointer hover:bg-opacity-80 ${
-            currentProjectId === project.id
-              ? theme === "dark"
-                ? "bg-blue-900/50 text-white"
-                : "bg-blue-100 text-blue-800"
-              : theme === "dark"
-              ? "hover:bg-gray-700"
-              : "hover:bg-gray-100"
-          }`}
+          onClick={() => setCurrentProjectId(p.id)}
+          className={`group flex items-center justify-between p-2 mb-1 rounded cursor-pointer text-sm
+            ${currentProjectId === p.id ? (theme === "dark" ? "bg-blue-800 text-white" : "bg-blue-100 text-blue-900") : (theme === "dark" ? "hover:bg-gray-700 text-gray-300" : "hover:bg-gray-100 text-gray-700")}
+          `}
         >
-          <Folder size={16} className="mr-2 text-blue-500 flex-shrink-0" />
-          <p className="truncate flex-1" title={project.name}>
-            {project.name}
-          </p>
-          <AlertDialogTrigger asChild onClick={(e) => e.stopPropagation()}>
+          <Folder className="mr-2 text-blue-500" />
+          <span className="truncate flex-1">{p.name}</span>
+          <AlertDialogTrigger asChild>
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 text-red-500 hover:bg-red-500/10"
-              title={`Delete project "${project.name}"`}
+              className="opacity-0 group-hover:opacity-100 text-red-500"
+              onClick={(e) => { e.stopPropagation(); }}
             >
-              <Trash2 className="h-4 w-4" />
+              <Trash2 />
             </Button>
           </AlertDialogTrigger>
         </div>
@@ -319,17 +198,13 @@ export default function CollapsibleProjectSidebar({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Project</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete the project "{project.name}"? This
-              will permanently delete the project and all associated chats.
+              This will permanently delete "{p.name}" and all its chats.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => handleDeleteProject(project.id, project.name)}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              Delete Project
+            <AlertDialogAction onClick={() => handleDeleteProject(p.id, p.name)}>
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -337,239 +212,93 @@ export default function CollapsibleProjectSidebar({
     ));
   };
 
-  const chatsForCurrent = chats.filter(
-    (c) => c.project_id === currentProjectId,
-  );
-
-  // Filter out any chats without a valid ID before mapping
-  const validChatsForCurrent = chatsForCurrent.filter(c => c && c.id);
+  // Render the list of chats for the active project
+  const chatsForCurrent = chats.filter(c => c.project_id === currentProjectId);
+  console.log("Sidebar: rendering", chatsForCurrent.length, "chats for project", currentProjectId);
 
   const renderChats = () => {
-    if (!currentProjectId) {
-      return (
-        <p
-          className={`text-xs text-center py-2 ${
-            theme === "dark" ? "text-gray-500" : "text-gray-400"
-          }`}
-        >
-          (Select project)
-        </p>
-      );
-    }
-    if (isLoadingChats) {
-      return (
-        <p
-          className={`text-center text-xs py-4 ${
-            theme === "dark" ? "text-gray-500" : "text-gray-400"
-          }`}
-        >
-          Loading chats…
-        </p>
-      );
-    }
-    if (chatsForCurrent.length === 0) {
-      return (
-        <p
-          className={`text-xs text-center py-2 ${
-            theme === "dark" ? "text-gray-500" : "text-gray-400"
-          }`}
-        >
-          (No chats)
-        </p>
-      );
-    }
-
-    return validChatsForCurrent.map((chat) => (
+    if (!currentProjectId) return <p className="py-2 text-center text-xs text-gray-500">(Select a project first)</p>;
+    if (isLoadingChats) return <p className="py-2 text-center text-xs text-gray-500">Loading chats…</p>;
+    if (!chatsForCurrent.length) return <p className="py-2 text-center text-xs text-gray-500">(No chats)</p>;
+    return chatsForCurrent.map((c) => (
       <div
-        key={String(chat.id)}
-        className={`p-2 rounded-md flex items-center justify-between cursor-pointer group ${
-          currentChatId === chat.id
-            ? theme === "dark"
-              ? "bg-gray-700"
-              : "bg-gray-200"
-            : theme === "dark"
-            ? "hover:bg-gray-800"
-            : "hover:bg-gray-100"
-        }`}
+        key={c.chat_id}
+        onClick={() => setCurrentChatId(c.chat_id)}
+        className={`group flex items-center p-2 mb-1 rounded cursor-pointer text-sm truncate
+          ${currentChatId === c.chat_id ? (theme === "dark" ? "bg-gray-700 text-white" : "bg-gray-200 text-gray-900") : (theme === "dark" ? "hover:bg-gray-800 text-gray-300" : "hover:bg-gray-100 text-gray-700")}
+        `}
       >
-        <div
-          className="flex items-center truncate mr-1 flex-1"
-          onClick={() => setCurrentChatId(chat.id)}
-        >
-          <MessageSquare
-            size={16}
-            className="mr-2 flex-shrink-0 text-gray-500"
-          />
-          <div className="truncate">
-            <p className="truncate" title={chat?.title ?? ''}>
-              {chat?.title || `Chat ${chat?.id ? chat.id.substring(0, 8) : '...'}`}
-            </p>
-            <p
-              className={`text-xs ${
-                theme === "dark" ? "text-gray-400" : "text-gray-500"
-              }`}
-            >
-              {new Date(chat.last_updated_at).toLocaleString(undefined, {
-                month: "short",
-                day: "numeric",
-                hour: "numeric",
-                minute: "2-digit",
-              })}
-            </p>
-          </div>
-        </div>
-
+        <MessageSquare className="mr-2" />
+        <span className="truncate">{c.name}</span>
         <Button
           variant="ghost"
           size="icon"
-          className={`h-6 w-6 text-gray-500 hover:text-red-500 invisible group-hover:visible flex-shrink-0 ${
-            deletingChatId === chat.id ? "text-red-500" : ""
-          }`}
-          onClick={(e) => {
-            e.stopPropagation();
-            handleDeleteChat(
-              chat.id,
-              chat?.title || `Chat ${chat?.id ? chat.id.substring(0, 8) : '...'}`
-            );
-          }}
-          disabled={deletingChatId === chat.id}
-          title="Delete Chat"
+          className="ml-auto opacity-0 group-hover:opacity-100 text-red-500"
+          onClick={(e) => { e.stopPropagation(); handleDeleteChat(c.chat_id); }}
         >
-          {deletingChatId === chat.id ? (
-            <Loader2 size={14} className="animate-spin" />
-          ) : (
-            <Trash2 size={14} />
-          )}
+          {deletingChatId === c.chat_id ? <Loader2 className="animate-spin" /> : <Trash2 />}
         </Button>
       </div>
     ));
   };
 
-  /** ------------------------------------------------------------------
-   *  JSX – main
-   * ----------------------------------------------------------------*/
   return (
-    <aside
-      className={`relative border-r transition-all duration-300 ease-in-out ${
-        theme === "dark" ? "border-gray-800 bg-[#0f1117]" : "border-gray-200 bg-gray-50"
-      } ${isCollapsed ? "w-16" : "w-72"} flex flex-col`}
-    >
-      {/* collapse toggle */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="absolute top-2 -right-4 z-10 h-7 w-7 rounded-full border bg-background hover:bg-muted"
-        onClick={() => setIsCollapsed(!isCollapsed)}
-        title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-      >
-        {isCollapsed ? <ChevronsRight size={16} /> : <ChevronsLeft size={16} />}
-      </Button>
+    <aside className={`flex flex-col h-full border-r transition-all ease-in-out duration-300
+      ${theme === "dark" ? "bg-gray-900 border-gray-700" : "bg-gray-50 border-gray-300"}
+      ${isCollapsed ? "w-16" : "w-64"}
+    `}>
+      <div className="flex items-center justify-between p-2">
+        {!isCollapsed && <span className="font-semibold text-sm">Projects & Chats</span>}
+        <Button variant="ghost" size="icon" onClick={() => setIsCollapsed(!isCollapsed)}>
+          {isCollapsed ? <ChevronsRight /> : <ChevronsLeft />}
+        </Button>
+      </div>
 
-      {/* content */}
-      <div
-        className={`p-4 overflow-hidden flex-grow flex flex-col ${
-          isCollapsed ? "items-center" : ""
-        }`}
-      >
-        {/* New chat */}
+      <div className="flex-1 flex flex-col overflow-hidden p-2">
         <Button
-          className={`w-full mb-4 ${isCollapsed ? "h-10 w-10 p-0" : ""}`}
           onClick={handleNewChat}
           disabled={!currentProjectId || isCreatingChat}
-          title={isCollapsed ? "New Chat" : ""}
+          className={`mb-2 w-full justify-center ${isCollapsed ? "p-0 h-9 w-9" : ""}`}
+          title={isCollapsed ? "New Chat" : undefined}
         >
-          {isCreatingChat ? (
-            <Loader2
-              size={16}
-              className={`animate-spin ${!isCollapsed ? "mr-2" : ""}`}
-            />
-          ) : (
-            <PlusCircle
-              size={16}
-              className={`${!isCollapsed ? "mr-2" : ""}`}
-            />
-          )}
-          {!isCollapsed && "New Chat"}
+          {isCreatingChat ? <Loader2 className="animate-spin" /> : <PlusCircle />}
+          {!isCollapsed && <span className="ml-2">New Chat</span>}
         </Button>
 
-        {/* separator */}
-        {!isCollapsed && (
-          <hr
-            className={`my-2 ${
-              theme === "dark" ? "border-gray-700" : "border-gray-300"
-            }`}
-          />
-        )}
+        {!isCollapsed && <hr className={`${theme === "dark" ? "border-gray-700" : "border-gray-300"} mb-2`} />}
 
-        {/* scrollable body */}
-        <ScrollArea className="flex-grow w-full">
-          {/* projects */}
+        <ScrollArea className="flex-1 overflow-auto">
           {!isCollapsed && (
-            <div className="mb-6">
-              <Dialog
-                open={showNewProjectDialog}
-                onOpenChange={setShowNewProjectDialog}
-              >
-                {/* header row (title + add btn) */}
+            <div className="mb-4">
+              <Dialog open={showNewProjectDialog} onOpenChange={setShowNewProjectDialog}>
                 <div className="flex items-center justify-between mb-2">
-                  <h3
-                    className={`font-semibold text-sm uppercase tracking-wider ${
-                      theme === "dark" ? "text-gray-400" : "text-gray-500"
-                    }`}
-                  >
-                    Projects
-                  </h3>
+                  <h3 className="font-semibold text-xs uppercase text-gray-500">Projects</h3>
                   <DialogTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      disabled={isCreatingProject}
-                      title="New Project"
-                    >
-                      {isCreatingProject ? (
-                        <Loader2 size={16} className="animate-spin" />
-                      ) : (
-                        <PlusCircle size={18} />
-                      )}
+                    <Button size="icon">
+                      {isCreatingProject ? <Loader2 className="animate-spin" /> : <PlusCircle />}
                     </Button>
                   </DialogTrigger>
                 </div>
                 {renderProjects()}
 
-                {/* dialog content – create project */}
-                <DialogContent className="sm:max-w-[425px]">
+                <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Create New Project</DialogTitle>
-                    <DialogDescription>
-                      Enter a project name.
-                    </DialogDescription>
+                    <DialogTitle>Create Project</DialogTitle>
+                    <DialogDescription>Enter a name for the new project.</DialogDescription>
                   </DialogHeader>
-                  <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="projectName" className="text-right">
-                        Name*
-                      </Label>
+                  <div className="p-4">
+                    <div className="mb-2">
+                      <Label htmlFor="projectName">Name*</Label>
                       <Input
                         id="projectName"
                         value={newProjectData.name || ""}
-                        onChange={(e) =>
-                          setNewProjectData({ name: e.target.value })
-                        }
-                        className="col-span-3"
-                        required
+                        onChange={(e) => setNewProjectData({ name: e.target.value })}
                       />
                     </div>
                   </div>
                   <DialogFooter>
-                    <Button
-                      onClick={handleNewProjectSubmit}
-                      disabled={isCreatingProject}
-                    >
-                      {isCreatingProject && (
-                        <Loader2 size={16} className="mr-2 animate-spin" />
-                      )}
-                      Create Project
+                    <Button onClick={handleNewProjectSubmit} disabled={isCreatingProject}>
+                      {isCreatingProject ? <Loader2 className="mr-2 animate-spin" /> : null}Create
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -577,74 +306,13 @@ export default function CollapsibleProjectSidebar({
             </div>
           )}
 
-          {/* chats */}
           {!isCollapsed && (
-            <div className="flex-1">
-              <h3
-                className={`font-semibold text-sm uppercase tracking-wider mb-2 ${
-                  theme === "dark" ? "text-gray-400" : "text-gray-500"
-                }`}
-              >
-                Chats
-              </h3>
+            <div>
+              <h3 className="font-semibold text-xs uppercase text-gray-500 mb-2">Chats</h3>
               {renderChats()}
             </div>
           )}
         </ScrollArea>
-
-        {/* collapsed toolbar */}
-        {isCollapsed && (
-          <div className="mt-auto flex flex-col items-center space-y-4 pt-4">
-            <Dialog
-              open={showNewProjectDialog}
-              onOpenChange={setShowNewProjectDialog}
-            >
-              <DialogTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  disabled={isCreatingProject}
-                  title="New Project"
-                >
-                  <PlusCircle size={18} />
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                  <DialogTitle>Create New Project</DialogTitle>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="projectNameCollapsed" className="text-right">
-                      Name*
-                    </Label>
-                    <Input
-                      id="projectNameCollapsed"
-                      value={newProjectData.name || ""}
-                      onChange={(e) =>
-                        setNewProjectData({ name: e.target.value })
-                      }
-                      className="col-span-3"
-                      required
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button
-                    onClick={handleNewProjectSubmit}
-                    disabled={isCreatingProject}
-                  >
-                    {isCreatingProject && (
-                      <Loader2 size={16} className="mr-2 animate-spin" />
-                    )}
-                    Save
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
-        )}
       </div>
     </aside>
   );

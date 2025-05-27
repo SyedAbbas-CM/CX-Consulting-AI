@@ -1,0 +1,77 @@
+# Customer Experience ROI Analysis
+
+## EXECUTIVE SUMMARY
+This business case evaluates the proposed investment in {cx_initiative} for {client_name}.
+The analysis indicates a potential ROI of {roi_percent}% over {roi_horizon} years, with a payback period of {payback_months} months.
+Key financial benefits include {top_financial_benefits}.
+Key non-financial benefits include {top_non_financial_benefits}.
+
+## CURRENT STATE ASSESSMENT
+### Performance Baseline
+- **NPS / CSAT / CES:** {current_cx_scores}
+- **Annual Churn:** {churn_rate}%
+- **Customer Lifetime Value:** ${clv}
+- **Cost to Serve:** ${cost_to_serve} per customer
+- **Conversion Rate:** {conversion_rate}%
+
+### Problem Statement
+{problem_statement}
+
+### Cost of Current Issues
+- **Direct Costs:** {direct_costs}
+- **Indirect Costs:** {indirect_costs}
+
+### Total Cost of Inaction
+${tci_annual} per year
+
+## PROPOSED SOLUTION
+### Solution Overview
+{solution_overview}
+
+### Expected Improvements
+{expected_improvements_list}
+
+### Success Metrics
+{success_metrics_table}
+
+## IMPLEMENTATION COSTS
+### One-Time Costs
+{one_time_costs_table}
+
+### Ongoing Costs
+{ongoing_costs_table}
+
+### Total Investment
+* **Year 1:** ${year1_cost}
+* **Year 2:** ${year2_cost}
+* **Year 3:** ${year3_cost}
+* **Total 3-Year Cost:** ${total_3y_cost}
+
+## EXPECTED BENEFITS
+### Financial Benefits
+{financial_benefits_table}
+
+### Non-Financial Benefits
+{non_financial_benefits_list}
+
+## ROI CALCULATION
+* **Total 3-Year Investment:** ${total_3y_cost}
+* **Total 3-Year Benefits:** ${total_benefit}
+* **Net Benefit:** ${net_benefit}
+* **ROI:** {roi_percent}%
+* **NPV:** ${npv}
+* **IRR:** {irr_percent}%
+* **Payback Period:** {payback_months} months
+
+## SENSITIVITY ANALYSIS
+{sensitivities_table}
+
+## RISK FACTORS
+{risk_table}
+
+## RECOMMENDATIONS
+{recommendations_block}
+
+---
+
+*Prepared by {consulting_firm} for {client_name} on {current_date}.*

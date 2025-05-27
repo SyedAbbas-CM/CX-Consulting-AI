@@ -32,4 +32,4 @@ export interface ModelStatus {
     status: 'downloading' | 'available' | 'unavailable' | 'error' | 'pending';
     download_progress?: number; // Optional: 0-100
     error_message?: string; // Optional: message if status is 'error'
-} 
+}

@@ -1,38 +1,46 @@
-import redis
-import uuid
+import asyncio
 import json
-from datetime import datetime, timezone
 import logging
-from typing import List, Dict, Any, Optional
+import uuid
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional
+
+import redis.asyncio as redis
 
 logger = logging.getLogger("cx_consulting_ai.chat_service")
+
+# Define TTL in seconds (e.g., 60 days)
+CHAT_TTL_SECONDS = 60 * 60 * 24 * 60
 
 
 class ChatService:
     """
-    Manages chat sessions and history in Redis.
+    Manages chat sessions and history in Redis using asyncio.
     ───────────────────────────────────────────
     Key layout (all helper methods are centralised, **use them everywhere**):
 
         chat:{chat_id}:metadata      – Hash   (project_id, name, timestamps…)
-        chat:{chat_id}:messages      – List   (JSON strings, newest → left/0)
+        chat:{chat_id}:messages      – List   (JSON strings, oldest → left/0, newest → right/-1)
         project:{project_id}:chats   – Set    (chat_id, chat_id, …)
     """
 
     # ---------- construction & helpers --------------------------------------------------
 
-    def __init__(self, redis_url: str = "redis://localhost:6379/0"):
+    def __init__(
+        self, redis_url: str = "redis://localhost:6379/0", max_history_length: int = 100
+    ):
         try:
             self.redis_client = redis.from_url(redis_url, decode_responses=True)
-            self.redis_client.ping()
-            logger.info("ChatService connected to Redis @ %s", redis_url)
-        except redis.exceptions.ConnectionError as e:
-            logger.error(f"Failed to connect to Redis at {redis_url}: {e}")
-            raise ConnectionError(f"Could not connect to Redis for ChatService: {e}")
+            self.max_history_length = max_history_length
+            logger.info(
+                f"ChatService initialized with Redis @ {redis_url} (async client) and max history length {self.max_history_length}"
+            )
         except Exception as e:
-            logger.error(f"An unexpected error occurred during ChatService Redis initialization: {e}", exc_info=True)
+            logger.error(
+                f"An unexpected error occurred during ChatService Redis initialization: {e}",
+                exc_info=True,
+            )
             raise
-
 
     # helper key builders
     def _meta_key(self, chat_id: str) -> str:
@@ -44,120 +52,223 @@ class ChatService:
     def _project_set_key(self, project_id: str) -> str:
         return f"project:{project_id}:chats"
 
-    # ---------- public API --------------------------------------------------------------
+    # ---------- public API (now async) --------------------------------------------------
 
-    def create_chat(self, project_id: str, chat_name: Optional[str] = None) -> Dict[str, Any]:
+    async def create_chat(
+        self,
+        user_id: str,
+        project_id: Optional[str] = None,
+        chat_name: Optional[str] = None,
+    ) -> Dict[str, Any]:
         chat_id = str(uuid.uuid4())
         now_iso = datetime.now(timezone.utc).isoformat()
-        chat_name = chat_name or f"Chat {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M')}"
+        chat_name = (
+            chat_name or f"Chat {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M')}"
+        )
 
         metadata = {
             "chat_id": chat_id,
             "project_id": project_id,
+            "user_id": user_id,
             "name": chat_name,
             "created_at": now_iso,
             "last_updated": now_iso,
         }
 
         try:
-            with self.redis_client.pipeline() as pipe:
-                pipe.hmset(self._meta_key(chat_id), metadata)
-                pipe.sadd(self._project_set_key(project_id), chat_id)
-                # ensure an empty list exists for messages
-                pipe.rpush(self._msg_key(chat_id), ":placeholder:")
-                pipe.lpop(self._msg_key(chat_id))
-                pipe.execute()
-            logger.info("Created chat '%s' for project '%s'", chat_id, project_id)
+            async with self.redis_client.pipeline(transaction=True) as pipe:
+                meta_key = self._meta_key(chat_id)
+                msg_key = self._msg_key(chat_id)
+
+                pipe.hset(meta_key, mapping=metadata)
+                if project_id:
+                    project_key = self._project_set_key(project_id)
+                    pipe.sadd(project_key, chat_id)
+                    pipe.expire(project_key, CHAT_TTL_SECONDS)
+
+                pipe.expire(meta_key, CHAT_TTL_SECONDS)
+                pipe.expire(msg_key, CHAT_TTL_SECONDS)
+
+                await pipe.execute()
+
+            logger.info(
+                f"Created chat '{chat_id}' (User: {user_id}, Project: {project_id or 'None'}) with TTL {CHAT_TTL_SECONDS} sec",
+            )
             return metadata
         except Exception as e:
             logger.exception("Redis error creating chat: %s", e)
             raise
 
-    def list_chats_for_project(self, project_id: str, limit: int = 50, offset: int = 0) -> List[Dict[str, Any]]:
-        chat_ids = list(self.redis_client.smembers(self._project_set_key(project_id))) or []
-        # Manual sorting if needed (e.g., by 'created_at' after fetching all metadata) - currently unordered Set
-        paginated = chat_ids[offset: offset + limit] 
+    async def list_chats_for_project(
+        self, project_id: str, limit: int = 50, offset: int = 0
+    ) -> List[Dict[str, Any]]:
+        chat_ids = (
+            list(await self.redis_client.smembers(self._project_set_key(project_id)))
+            or []
+        )
+        paginated = chat_ids[offset : offset + limit]
         summaries: List[Dict[str, Any]] = []
 
         if not paginated:
             return summaries
 
-        with self.redis_client.pipeline() as pipe:
+        async with self.redis_client.pipeline() as pipe:
             for cid in paginated:
                 pipe.hgetall(self._meta_key(cid))
-            metas = pipe.execute()
+            metas = await pipe.execute()
 
         for cid, meta in zip(paginated, metas):
             if not meta:
-                logger.warning("Missing metadata for chat %s in project %s", cid, project_id)
+                logger.warning(
+                    "Missing metadata for chat %s in project %s", cid, project_id
+                )
                 continue
-            # Back-compat: some old chats miss last_updated → fallback to created_at
-            meta.setdefault("last_updated", meta.get("created_at"))
-            summaries.append({"chat_id": cid, **meta})
+            # Ensure essential fields are present, providing defaults if reasonable
+            summary = {
+                "chat_id": cid,  # This is the definitive ID from the project's set
+                "name": meta.get("name", f"Chat {cid[:8]}"),  # Default name if missing
+                "project_id": meta.get("project_id"),  # Can be None if not set in meta
+                "user_id": meta.get("user_id"),  # Can be None
+                "created_at": meta.get(
+                    "created_at", datetime.now(timezone.utc).isoformat()
+                ),  # Default to now if missing
+                "last_updated": meta.get(
+                    "last_updated",
+                    meta.get("created_at", datetime.now(timezone.utc).isoformat()),
+                ),  # Default to created_at or now
+            }
+            summaries.append(summary)
         return summaries
 
-    def get_chat_history(self, chat_id: str, limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
-        # Check metadata exists first to confirm chat validity
-        if not self.redis_client.exists(self._meta_key(chat_id)):
-            logger.warning("Request for history of non-existent chat %s", chat_id)
-            return [] # Return empty list if chat metadata doesn't exist
+    async def get_chat_history(
+        self, chat_id: str, limit: int = 100
+    ) -> List[Dict[str, Any]]:
+        meta_key = self._meta_key(chat_id)
+        msg_key = self._msg_key(chat_id)
 
-        raw_messages = self.redis_client.lrange(self._msg_key(chat_id), offset, offset + limit - 1)
+        # Atomically check existence and refresh TTL if exists
+        async with self.redis_client.pipeline(transaction=True) as pipe:
+            pipe.exists(meta_key)
+            pipe.expire(meta_key, CHAT_TTL_SECONDS)  # Refresh TTL on read
+            pipe.expire(msg_key, CHAT_TTL_SECONDS)  # Refresh TTL on read
+            results = await pipe.execute()
+
+        if not results[0]:  # results[0] is the output of pipe.exists(meta_key)
+            logger.warning(
+                "Request for history of non-existent chat %s (or TTL expired)", chat_id
+            )
+            return []
+
+        # Fetch project_id from metadata to refresh project set TTL if possible
+        # This requires an extra hget call or for get_chat_summary to be used first if we always want to refresh project set TTL
+        meta = await self.get_chat_summary(
+            chat_id
+        )  # This will also refresh meta_key and msg_key TTLs again
+        if meta and meta.get("project_id"):
+            project_key = self._project_set_key(meta.get("project_id"))
+            await self.redis_client.expire(project_key, CHAT_TTL_SECONDS)
+
+        raw_messages = await self.redis_client.lrange(msg_key, -limit, -1)
         messages: List[Dict[str, Any]] = []
         for raw in raw_messages:
             try:
                 messages.append(json.loads(raw))
             except Exception:
                 logger.exception("Corrupt message in chat %s: %s", chat_id, raw)
-        return messages # Return the list of message dicts
+        return messages
 
-    def add_message_to_chat(self, chat_id: str, role: str, content: str) -> bool:
+    async def add_message_to_chat(
+        self,
+        chat_id: str,
+        *,
+        role: str,
+        content: str,
+        project_id: Optional[str] = None,
+        user_id: Optional[str] = None,
+    ) -> bool:
         if role not in {"user", "assistant"}:
             logger.error("Invalid role '%s'", role)
             return False
-        # Use the correct key check
-        if not self.redis_client.exists(self._meta_key(chat_id)):
+        if not await self.redis_client.exists(self._meta_key(chat_id)):
             logger.warning("Attempt to write to non-existent chat %s", chat_id)
             return False
 
-        now_iso = datetime.utcnow().isoformat()
-        msg_json = json.dumps({"role": role, "content": content, "timestamp": now_iso})
+        now_iso = datetime.now(timezone.utc).isoformat()
+        message_payload = {"role": role, "content": content, "timestamp": now_iso}
+        if user_id:
+            message_payload["user_id"] = user_id
+        if project_id:
+            message_payload["project_id"] = project_id
+
+        msg_json = json.dumps(message_payload)
         try:
-            with self.redis_client.pipeline() as pipe:
-                # Use the correct key for messages
-                pipe.lpush(self._msg_key(chat_id), msg_json)
-                # Use the correct key for metadata
-                pipe.hset(self._meta_key(chat_id), "last_updated", now_iso) 
-                pipe.execute()
+            async with self.redis_client.pipeline(transaction=True) as pipe:
+                meta_key = self._meta_key(chat_id)
+                msg_key = self._msg_key(chat_id)
+
+                pipe.rpush(msg_key, msg_json)
+                pipe.ltrim(msg_key, -self.max_history_length, -1)
+                pipe.hset(meta_key, "last_updated", now_iso)
+
+                # Refresh TTLs on write
+                pipe.expire(meta_key, CHAT_TTL_SECONDS)
+                pipe.expire(msg_key, CHAT_TTL_SECONDS)
+
+                # If project_id is available (it is an arg to this function now)
+                # We should also refresh the project's set of chats TTL
+                if project_id:
+                    project_key = self._project_set_key(project_id)
+                    pipe.expire(project_key, CHAT_TTL_SECONDS)
+                elif not project_id:
+                    # Attempt to get project_id from metadata if not passed directly
+                    # This adds an extra read, so it's better if project_id is passed consistently
+                    current_meta = await self.redis_client.hgetall(meta_key)
+                    pid_from_meta = current_meta.get("project_id")
+                    if pid_from_meta:
+                        project_key = self._project_set_key(pid_from_meta)
+                        pipe.expire(project_key, CHAT_TTL_SECONDS)
+
+                await pipe.execute()
             return True
-        except Exception:
-            logger.exception("Failed to add message to chat %s", chat_id)
+        except Exception as e:
+            logger.exception("Failed to add message to chat %s: %s", chat_id, e)
             return False
 
     async def get_chat_summary(self, chat_id: str) -> Optional[Dict[str, Any]]:
-        # Use the correct key
-        meta = self.redis_client.hgetall(self._meta_key(chat_id))
+        meta_key = self._meta_key(chat_id)
+        msg_key = self._msg_key(
+            chat_id
+        )  # For consistency, refresh message TTL too if accessing summary
+
+        async with self.redis_client.pipeline(transaction=True) as pipe:
+            pipe.hgetall(meta_key)
+            pipe.expire(meta_key, CHAT_TTL_SECONDS)  # Refresh TTL on read
+            pipe.expire(msg_key, CHAT_TTL_SECONDS)  # Refresh TTL on read
+            results = await pipe.execute()
+
+        meta = results[0]
+
+        if meta and meta.get("project_id"):
+            project_key = self._project_set_key(meta.get("project_id"))
+            await self.redis_client.expire(project_key, CHAT_TTL_SECONDS)
+
         return meta or None
 
     async def delete_chat(self, chat_id: str) -> bool:
-        # Use the correct key
-        meta = self.redis_client.hgetall(self._meta_key(chat_id))
+        meta = await self.redis_client.hgetall(self._meta_key(chat_id))
         if not meta:
             logger.warning("Delete requested for missing chat %s", chat_id)
             return False
         project_id = meta.get("project_id")
         try:
-            with self.redis_client.pipeline() as pipe:
-                # Use correct keys
+            async with self.redis_client.pipeline(transaction=True) as pipe:
                 pipe.delete(self._meta_key(chat_id))
                 pipe.delete(self._msg_key(chat_id))
                 if project_id:
-                    # Use correct key
                     pipe.srem(self._project_set_key(project_id), chat_id)
-                pipe.execute()
+                await pipe.execute()
             logger.info("Deleted chat %s", chat_id)
             return True
-        except Exception:
-            logger.exception("Failed to delete chat %s", chat_id)
+        except Exception as e:
+            logger.exception("Failed to delete chat %s: %s", chat_id, e)
             return False
-

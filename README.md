@@ -137,4 +137,4 @@ The application consists of the following components:
 
 ## License
 
-[MIT License](LICENSE) 
+[MIT License](LICENSE)

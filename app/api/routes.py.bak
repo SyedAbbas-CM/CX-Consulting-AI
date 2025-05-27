@@ -51,37 +51,37 @@ async def upload_document(
         # Check if either project_id is provided or document is global
         if not project_id and not is_global:
             raise HTTPException(
-                status_code=400, 
+                status_code=400,
                 detail="Either project_id must be provided or document must be marked as global"
             )
-            
+
         # If project_id is provided, validate it exists
         if project_id:
             project = project_manager.get_project(project_id)
             if not project:
                 raise HTTPException(status_code=404, detail=f"Project {project_id} not found")
-        
+
         # Check file size
         content = await file.read()
         file_size_mb = len(content) / (1024 * 1024)
         max_size_mb = 50  # 50 MB max
-        
+
         if file_size_mb > max_size_mb:
             raise HTTPException(
-                status_code=400, 
+                status_code=400,
                 detail=f"File too large: {file_size_mb:.2f} MB. Maximum size: {max_size_mb} MB"
             )
-        
+
         # Process document
         result = await rag_engine.process_document(content, file.filename)
-        
+
         if result["status"] != "success":
             raise HTTPException(status_code=500, detail=result["error"])
-        
+
         # If project_id is provided, add document to project
         if project_id:
             project_manager.add_document_to_project(project_id, result["document_id"])
-    
+
         return DocumentUploadResponse(
             filename=file.filename,
             document_id=result["document_id"],
@@ -108,11 +108,11 @@ async def ask_question(
     """Ask a question to the CX Consulting AI."""
     try:
         start_time = time.time()
-        
+
         # Get or create conversation
         conversation_id = request.conversation_id
         project_id = request.project_id
-        
+
         if not conversation_id:
             # Create new conversation
             conversation_id = memory_manager.create_conversation(project_id)
@@ -122,39 +122,39 @@ async def ask_question(
         elif project_id and memory_manager.get_conversation_project(conversation_id) != project_id:
             # If project ID is provided and different from current association, update it
             memory_manager.set_conversation_project(conversation_id, project_id)
-            
+
             # Also update the project's conversation list
             if project_manager.get_project(project_id):
                 project_manager.add_conversation_to_project(project_id, conversation_id)
-    
+
         # Get conversation history
         conversation_history = memory_manager.get_formatted_history(conversation_id)
-        
+
         # Add user message to memory
         memory_manager.add_message(
             conversation_id=conversation_id,
             role="user",
             content=request.query
         )
-        
+
         # Generate answer
         response = await rag_engine.ask(
             question=request.query,
             conversation_id=conversation_id
         )
-        
+
         # Add assistant message to memory
         memory_manager.add_message(
             conversation_id=conversation_id,
             role="assistant",
             content=response
         )
-        
+
         # Prepare sources for response (placeholder for now)
         sources = []
-        
+
         processing_time = time.time() - start_time
-        
+
         return QuestionResponse(
             answer=response,
             conversation_id=conversation_id,
@@ -176,11 +176,11 @@ async def generate_cx_strategy(
     """Generate a CX strategy document."""
     try:
         start_time = time.time()
-        
+
         # Get or create conversation
         conversation_id = request.conversation_id
         project_id = request.project_id
-        
+
         if not conversation_id:
             conversation_id = memory_manager.create_conversation(project_id)
         elif not memory_manager.get_conversation(conversation_id):
@@ -188,18 +188,18 @@ async def generate_cx_strategy(
         elif project_id and memory_manager.get_conversation_project(conversation_id) != project_id:
             # Update project association
             memory_manager.set_conversation_project(conversation_id, project_id)
-            
+
             # Update project's conversation list
             if project_manager.get_project(project_id):
                 project_manager.add_conversation_to_project(project_id, conversation_id)
-        
+
         # Generate strategy
         response, conversation_id, tokens = await rag_engine.create_proposal(
             client_info=f"{request.client_name} ({request.industry})",
             requirements=request.challenges,
             conversation_id=conversation_id
         )
-        
+
         # Store document if project_id is provided
         document_id = None
         if project_id:
@@ -221,9 +221,9 @@ async def generate_cx_strategy(
             except Exception as doc_error:
                 logger.error(f"Error storing document: {str(doc_error)}")
                 # Continue without failing the request
-        
+
         processing_time = time.time() - start_time
-        
+
         return DeliverableResponse(
             content=response,
             conversation_id=conversation_id,
@@ -245,11 +245,11 @@ async def generate_roi_analysis(
 """Generate an ROI analysis."""
 try:
 start_time = time.time()
-        
+
     # Get or create conversation
     conversation_id = request.conversation_id
         project_id = request.project_id
-        
+
     if not conversation_id:
             conversation_id = memory_manager.create_conversation(project_id)
     elif not memory_manager.get_conversation(conversation_id):
@@ -257,18 +257,18 @@ start_time = time.time()
         elif project_id and memory_manager.get_conversation_project(conversation_id) != project_id:
             # Update project association
             memory_manager.set_conversation_project(conversation_id, project_id)
-            
+
             # Update project's conversation list
             if project_manager.get_project(project_id):
                 project_manager.add_conversation_to_project(project_id, conversation_id)
-        
+
         # Generate ROI analysis
         response, conversation_id, tokens = await rag_engine.create_roi_analysis(
             client_info=f"{request.client_name} ({request.industry})",
             project_details=f"{request.project_description}\n\nCurrent metrics: {request.current_metrics}",
             conversation_id=conversation_id
         )
-        
+
         # Store document if project_id is provided
         document_id = None
         if project_id:
@@ -291,9 +291,9 @@ start_time = time.time()
             except Exception as doc_error:
                 logger.error(f"Error storing document: {str(doc_error)}")
                 # Continue without failing the request
-    
+
     processing_time = time.time() - start_time
-    
+
     return DeliverableResponse(
             content=response,
         conversation_id=conversation_id,
@@ -315,11 +315,11 @@ async def generate_journey_map(
 """Generate a customer journey map."""
 try:
 start_time = time.time()
-        
+
     # Get or create conversation
     conversation_id = request.conversation_id
         project_id = request.project_id
-        
+
     if not conversation_id:
             conversation_id = memory_manager.create_conversation(project_id)
     elif not memory_manager.get_conversation(conversation_id):
@@ -327,18 +327,18 @@ start_time = time.time()
         elif project_id and memory_manager.get_conversation_project(conversation_id) != project_id:
             # Update project association
             memory_manager.set_conversation_project(conversation_id, project_id)
-            
+
             # Update project's conversation list
             if project_manager.get_project(project_id):
                 project_manager.add_conversation_to_project(project_id, conversation_id)
-        
+
         # Generate journey map
         response, conversation_id, tokens = await rag_engine.create_journey_map(
             persona=request.persona,
             scenario=request.scenario,
             conversation_id=conversation_id
         )
-        
+
         # Store document if project_id is provided
         document_id = None
         if project_id:
@@ -361,9 +361,9 @@ start_time = time.time()
             except Exception as doc_error:
                 logger.error(f"Error storing document: {str(doc_error)}")
                 # Continue without failing the request
-    
+
     processing_time = time.time() - start_time
-    
+
     return DeliverableResponse(
             content=response,
         conversation_id=conversation_id,
@@ -388,14 +388,14 @@ async def get_conversations(
         if project_id:
             conversation_ids = memory_manager.get_project_conversations(project_id)
             conversation_list = []
-            
+
             for conv_id in conversation_ids:
                 conv = memory_manager.get_conversation(conv_id)
                 if conv:
                     # Calculate timestamps
                     created_at = datetime.fromtimestamp(conv[0]["timestamp"]).isoformat() if conv else datetime.now().isoformat()
                     updated_at = datetime.fromtimestamp(conv[-1]["timestamp"]).isoformat() if conv else datetime.now().isoformat()
-                    
+
                     conversation_list.append(ConversationInfo(
                         id=conv_id,
                         created_at=created_at,
@@ -403,7 +403,7 @@ async def get_conversations(
                         message_count=len(conv),
                         project_id=project_id
                     ))
-            
+
             # Apply pagination
             paginated = conversation_list[offset:offset+limit]
             return ConversationsResponse(
@@ -436,7 +436,7 @@ try:
             project = project_manager.get_project(project_id)
             if project and conversation_id in project.get("conversation_ids", []):
                 project_manager.remove_conversation_from_project(project_id, conversation_id)
-        
+
         # Delete conversation
 success = memory_manager.delete_conversation(conversation_id)
     if success:
@@ -474,7 +474,7 @@ async def create_project(
             description=project_request.description,
             metadata=project_request.metadata
         )
-        
+
         # Return the created project
         project = project_manager.get_project(project_id)
         return project
@@ -524,7 +524,7 @@ async def update_project(
         success = project_manager.update_project(project_id, updates)
         if not success:
             raise HTTPException(status_code=404, detail=f"Project {project_id} not found")
-        
+
         # Return the updated project
         project = project_manager.get_project(project_id)
         return project
@@ -545,7 +545,7 @@ async def delete_project(
         success = project_manager.delete_project(project_id)
         if not success:
             raise HTTPException(status_code=404, detail=f"Project {project_id} not found")
-        
+
         return {"status": "success", "message": f"Project {project_id} deleted"}
     except HTTPException:
         raise
@@ -566,7 +566,7 @@ async def get_project_documents(
         project = project_manager.get_project(project_id)
         if not project:
             raise HTTPException(status_code=404, detail=f"Project {project_id} not found")
-        
+
         documents = project_manager.get_project_documents(project_id)
         return ProjectDocumentsResponse(documents=documents, count=len(documents))
     except HTTPException:
@@ -603,7 +603,7 @@ async def update_document(
         success = project_manager.update_document(document_id, updates)
         if not success:
             raise HTTPException(status_code=404, detail=f"Document {document_id} not found")
-        
+
         # Return the updated document
         document = project_manager.get_document(document_id)
         return document
@@ -624,7 +624,7 @@ async def delete_document(
         success = project_manager.delete_document(document_id)
         if not success:
             raise HTTPException(status_code=404, detail=f"Document {document_id} not found")
-        
+
         return {"status": "success", "message": f"Document {document_id} deleted"}
     except HTTPException:
         raise
@@ -646,10 +646,10 @@ async def get_project_conversations(
         project = project_manager.get_project(project_id)
         if not project:
             raise HTTPException(status_code=404, detail=f"Project {project_id} not found")
-        
+
         # Get conversation IDs
         conversation_ids = memory_manager.get_project_conversations(project_id)
-        
+
         # Get conversation details
         conversations = []
         for conv_id in conversation_ids:
@@ -663,7 +663,7 @@ async def get_project_conversations(
                     message_count=len(conv),
                     project_id=project_id
                 ))
-        
+
         return ConversationsResponse(conversations=conversations, count=len(conversations))
     except HTTPException:
         raise
@@ -684,16 +684,16 @@ async def associate_conversation_with_project(
         project = project_manager.get_project(project_id)
         if not project:
             raise HTTPException(status_code=404, detail=f"Project {project_id} not found")
-        
+
         # Check if conversation exists
         conversation = memory_manager.get_conversation(conversation_id)
         if not conversation:
             raise HTTPException(status_code=404, detail=f"Conversation {conversation_id} not found")
-        
+
         # Associate conversation with project
         memory_manager.set_conversation_project(conversation_id, project_id)
         project_manager.add_conversation_to_project(project_id, conversation_id)
-        
+
         return {"status": "success", "message": f"Conversation {conversation_id} associated with project {project_id}"}
     except HTTPException:
         raise
@@ -713,7 +713,7 @@ async def list_users(
     try:
         from app.services.auth_service import AuthService
         auth_service = AuthService()
-        
+
         users, count = auth_service.list_users(limit=limit, offset=offset)
         return {"users": users, "count": count}
     except Exception as e:
@@ -730,15 +730,15 @@ async def admin_update_user(
     try:
         from app.services.auth_service import AuthService
         auth_service = AuthService()
-        
+
         # Don't allow changing password through this endpoint
         if "password" in updates:
             del updates["password"]
-        
+
         user = auth_service.update_user(user_id, updates)
         if not user:
             raise HTTPException(status_code=404, detail=f"User {user_id} not found")
-        
+
         return user
     except HTTPException:
         raise
@@ -755,15 +755,15 @@ async def admin_delete_user(
     try:
         from app.services.auth_service import AuthService
         auth_service = AuthService()
-        
+
         # Don't allow deleting yourself
         if user_id == current_user["id"]:
             raise HTTPException(status_code=400, detail="Cannot delete your own account")
-        
+
         success = auth_service.delete_user(user_id)
         if not success:
             raise HTTPException(status_code=404, detail=f"User {user_id} not found")
-        
+
         return {"status": "success", "message": f"User {user_id} deleted"}
     except HTTPException:
         raise
@@ -780,13 +780,13 @@ async def admin_create_user(
     try:
         from app.services.auth_service import AuthService
         auth_service = AuthService()
-        
+
         # Check required fields
         required_fields = ["username", "email", "password"]
         for field in required_fields:
             if field not in user_data:
                 raise HTTPException(status_code=400, detail=f"Missing required field: {field}")
-        
+
         # Create user
         user = auth_service.create_user(
             username=user_data["username"],
@@ -796,13 +796,13 @@ async def admin_create_user(
             company=user_data.get("company"),
             is_admin=user_data.get("is_admin", False)
         )
-        
+
         if not user:
             raise HTTPException(
                 status_code=400,
                 detail="Could not create user. Username or email may already exist."
             )
-        
+
         return user
     except HTTPException:
         raise

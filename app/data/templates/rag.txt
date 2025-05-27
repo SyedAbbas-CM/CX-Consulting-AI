@@ -1,0 +1,12 @@
+{system_prompt}
+
+{conversation_history_block}
+
+{context}
+
+---
+Answer the user question truthfully.
+Cite each source chunk like **(Source: {{chunk_id}})**.
+
+User: {query}
+Assistant:

@@ -1,2 +1,2 @@
 # app/frontend/__init__.py
-# Initialize the frontend package 
+# Initialize the frontend package

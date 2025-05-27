@@ -13,6 +13,8 @@ transformers>=4.36.0
 torch>=2.0.0
 tokenizers>=0.15.0
 accelerate>=0.25.0
+starlette-prometheus
+    prometheus-client
 
 # Embedding and vector store dependencies
 sentence-transformers>=2.2.2
@@ -31,8 +33,16 @@ langchainhub>=0.1.14
 bs4>=0.0.1
 pypdf>=3.17.1
 pdfminer.six>=20221105
-unstructured>=0.10.30
-tiktoken>=0.5.1
+unstructured[pdf]>=0.12.0
+tiktoken>=0.7.0
+pdf2image
+pytesseract
+pillow
+PyMuPDF # For fitz, PDF text extraction
+pdfplumber # PDF text extraction fallback
+python-docx # For .docx file processing
+openpyxl # For .xlsx file processing with pandas
+xlrd # For .xls file processing with pandas (older Excel format)
 
 # Data handling
 numpy>=1.24.0
@@ -53,8 +63,9 @@ opentelemetry-exporter-otlp>=1.20.0
 # Utilities
 tqdm>=4.66.1
 loguru>=0.7.2
+werkzeug>=3.0.0
 
-# Testing 
+# Testing
 pytest>=7.4.3
 pytest-asyncio>=0.21.1
 
@@ -65,4 +76,10 @@ bcrypt>=4.0.1       # For bcrypt algorithm
 python-multipart>=0.0.6  # For form data parsing
 
 # Add tenacity for retry logic
-tenacity 
+tenacity
+
+# Add rank_bm25
+rank_bm25
+
+# For llamacpp (optional, install manually if needed with specific CMAKE_ARGS)
+# llama-cpp-python==0.2.68 # Requires BLAS to be installed, e.g. via OpenBLAS or Accelerate framework

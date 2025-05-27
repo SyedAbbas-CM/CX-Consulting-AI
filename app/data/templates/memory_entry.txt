@@ -1,0 +1,6 @@
+## SHORT-TERM MEMORY ENTRY
+* **Who:** {user_name}
+* **What happened:** {event_or_preference}
+* **Why it matters:** {reason}
+
+(Expires in {ttl_days} days unless promoted to long-term memory.)

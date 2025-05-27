@@ -16,4 +16,4 @@ export interface User {
   full_name?: string; // Optional full name
   disabled?: boolean;
   // Add other relevant user properties
-} 
+}

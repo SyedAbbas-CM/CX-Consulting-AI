@@ -1,0 +1,47 @@
+# Customer Experience Strategy for {client_name}
+
+## EXECUTIVE SUMMARY
+{exec_summary}
+
+## STRATEGIC CONTEXT
+### Business Alignment
+{business_alignment}
+
+### Market Context
+{market_context}
+
+### Current CX Performance
+{current_performance}
+
+## CX VISION & PRINCIPLES
+* **Vision:** {cx_vision}
+* **Guiding Principles:**
+  {cx_principles_list}
+
+## CUSTOMER INSIGHTS
+{customer_insights}
+
+## STRATEGIC INITIATIVES
+{strategic_initiatives_table}
+
+## GOVERNANCE & OPERATING MODEL
+{governance_model}
+
+## MEASUREMENT FRAMEWORK
+{measurement_framework}
+
+## IMPLEMENTATION ROADMAP
+{implementation_roadmap}
+
+## BUSINESS CASE
+{business_case_block}
+
+## RISK MANAGEMENT
+{risk_management_block}
+
+## APPENDIX
+{appendix_block}
+
+---
+
+*Strategy developed by {consulting_firm} for {client_name} — {current_date}.*

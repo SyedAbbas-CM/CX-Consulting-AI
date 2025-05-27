@@ -1,2 +1,2 @@
 # app/core/__init__.py
-# Initialize the core package 
+# Initialize the core package

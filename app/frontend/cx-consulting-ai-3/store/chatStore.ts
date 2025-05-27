@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { ChatSummaryResponse } from '../types/chat';
-import { listChats } from '../lib/apiClient'; 
+import { listChats } from '../lib/apiClient';
 
 interface ChatState {
   currentProjectId: string | null;
@@ -8,6 +8,7 @@ interface ChatState {
   currentChatId: string | null;
   isLoadingChats: boolean;
   error: string | null;
+  activeDeliverableType: string | null;
   setProjectId: (projectId: string | null) => void;
   setCurrentChatId: (chatId: string | null) => void;
   setChats: (chats: ChatSummaryResponse[]) => void;
@@ -15,6 +16,7 @@ interface ChatState {
   removeChat: (chatId: string) => void;
   fetchChats: (projectId: string) => Promise<void>; // Action to load chats
   clearChats: () => void; // Add clearChats action type
+  setActiveDeliverableType: (type: string | null) => void;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -23,6 +25,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   currentChatId: null,
   isLoadingChats: false,
   error: null,
+  activeDeliverableType: null,
 
   setProjectId: (projectId) => {
     if (get().currentProjectId !== projectId) {
@@ -32,7 +35,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       console.log(`Chat Store: Project ID already ${projectId}.`);
     }
   },
-  
+
   setCurrentChatId: (chatId) => set({ currentChatId: chatId }),
 
   setChats: (chats) => set({ chats: chats, isLoadingChats: false }),
@@ -44,7 +47,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   removeChat: (chatId) => set((state) => ({
     // Filter out the chat with the given ID (use chat.id based on updated type)
-    chats: state.chats.filter(chat => chat.id !== chatId), 
+    chats: state.chats.filter(chat => chat.chat_id !== chatId),
     // If the deleted chat was the current one, reset currentChatId
     currentChatId: state.currentChatId === chatId ? null : state.currentChatId
   })),
@@ -54,11 +57,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
        console.log(`Chat Store: Skipping fetch for ${projectId} as current is ${get().currentProjectId}`);
        if (get().currentProjectId === null && get().chats.length > 0) {
          // Clear chats if project becomes null
-         set({ chats: [], currentChatId: null }); 
+         set({ chats: [], currentChatId: null });
        }
-       return; 
+       return;
     }
-    
+
     console.log(`Chat Store: Fetching chats for project ${projectId}...`);
     set({ isLoadingChats: true, error: null });
     try {
@@ -86,8 +89,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set({ chats: [], currentChatId: null, error: null });
     console.log("Chat Store: Cleared all chats.");
   },
+
+  setActiveDeliverableType: (type) => set({ activeDeliverableType: type }),
 }));
 
 // Optional: Initialize: Fetch chats for the default project ID when the store is first used/app loads
 // This might need adjustment based on app structure (e.g., call fetchChats in a layout component)
-// useChatStore.getState().fetchChats(useChatStore.getState().currentProjectId ?? ""); 
+// useChatStore.getState().fetchChats(useChatStore.getState().currentProjectId ?? "");

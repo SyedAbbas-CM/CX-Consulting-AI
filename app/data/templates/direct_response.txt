@@ -1,0 +1,6 @@
+{system_prompt}
+
+{conversation_history_block}
+
+User: {query}
+Assistant:

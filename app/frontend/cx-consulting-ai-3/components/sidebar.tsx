@@ -16,15 +16,15 @@ interface SidebarProps {
   handleSetActive: (modelId: string) => void;
 }
 
-export default function Sidebar({ 
-  theme, 
-  models, 
-  loadingModels, 
-  downloadingModel, 
-  settingModel, 
-  isModelActive, 
-  handleDownload, 
-  handleSetActive 
+export default function Sidebar({
+  theme,
+  models,
+  loadingModels,
+  downloadingModel,
+  settingModel,
+  isModelActive,
+  handleDownload,
+  handleSetActive
 }: SidebarProps) {
   return (
     <div className={`h-full flex flex-col p-4 border-l ${
@@ -70,7 +70,7 @@ export default function Sidebar({
                             className="text-xs h-7 bg-blue-600 hover:bg-blue-700"
                         >
                             {downloadingModel === model.id ? (
-                                <Loader2 size={12} className="mr-1 animate-spin"/> 
+                                <Loader2 size={12} className="mr-1 animate-spin"/>
                             ) : (
                                 <Download size={12} className="mr-1" />
                             )}
@@ -85,4 +85,4 @@ export default function Sidebar({
       </div>
     </div>
   );
-} 
+}

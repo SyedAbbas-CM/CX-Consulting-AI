@@ -4,6 +4,7 @@ export interface ProjectDocument {
   filename?: string;      // Made optional, update if always present
   document_type?: string; // Made optional
   created_at: string;    // ISO String
+  content?: string;       // Add content field, optional as it might be fetched on demand
   // Add other relevant fields based on backend ProjectDocument schema
 }
 
@@ -36,4 +37,4 @@ export interface ProjectsResponse {
 // Added export for listing project documents
 export interface ProjectDocumentsResponse {
   documents: ProjectDocument[];
-} 
+}

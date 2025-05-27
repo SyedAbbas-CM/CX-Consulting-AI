@@ -1,10 +1,14 @@
 # app/api/middleware/admin.py
-from fastapi import HTTPException, status, Depends
-from typing import Optional, Callable
+from typing import Callable, Optional
+
+from fastapi import Depends, HTTPException, status
+
 from app.api.auth import get_current_user
+
 
 def admin_required(func: Callable):
     """Dependency to check if a user is an admin."""
+
     async def wrapper(*args, current_user: dict = Depends(get_current_user), **kwargs):
         if not current_user.get("is_admin", False):
             raise HTTPException(
@@ -13,4 +17,5 @@ def admin_required(func: Callable):
                 headers={"WWW-Authenticate": "Bearer"},
             )
         return await func(*args, current_user=current_user, **kwargs)
-    return wrapper 
+
+    return wrapper

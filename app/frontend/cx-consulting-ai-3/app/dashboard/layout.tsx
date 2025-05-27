@@ -4,8 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { useTheme } from 'next-themes'; // Import useTheme
 
 // Import Model Management related things
-import { 
-  getLlmConfig, 
+import {
+  getLlmConfig,
   downloadModel,
   setActiveModel,
   listModels
@@ -18,13 +18,13 @@ import { useToast } from '@/components/ui/use-toast'; // Import toast
 import Link from 'next/link';
 import { useAuth } from '@/context/auth-context'; // Import auth context
 import CollapsibleProjectSidebar from '@/components/collapsible-project-sidebar';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuLabel, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -55,7 +55,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           const modelData = await listModels();
           setModels(modelData.available_models || []);
           setActiveModelPath(modelData.active_model_path || 'Unknown');
-          
+
           const configData = await getLlmConfig();
           setLlmConfig(configData);
         } else {
@@ -115,7 +115,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       const modelInfo = models.find(m => m.id === modelId);
       const newPath = modelInfo?.path || 'Unknown'; // Use actual path if available
       setActiveModelPath(newPath); // Use path from ModelInfo if available
-    } catch (error: any) { 
+    } catch (error: any) {
       console.error("Error setting active model:", error);
       const errorMessage = error?.errorData?.detail || error?.message || "An unknown error occurred.";
       // alert(`Failed to set active model: ${errorMessage}`);
@@ -133,7 +133,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
     if (!activeModelPath || activeModelPath === 'Unknown' || !model.path) return false;
     // Normalize paths slightly (optional, depends on backend consistency)
-    const normalizedActivePath = activeModelPath.replace(/^models\//, ''); 
+    const normalizedActivePath = activeModelPath.replace(/^models\//, '');
     const normalizedModelPath = model.path.replace(/^models\//, '');
     return normalizedModelPath === normalizedActivePath;
   };
@@ -141,11 +141,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // Prevent rendering theme-dependent parts until mounted
   if (!mounted) {
     // Render null or a basic loading state/skeleton on the server and initial client render
-    return null; 
+    return null;
   }
 
   return (
-    <div className={`flex h-screen w-screen overflow-hidden ${ 
+    <div className={`flex h-screen w-screen overflow-hidden ${
       theme === 'dark' ? 'bg-[#0f1117] text-gray-200' : 'bg-gray-50 text-gray-800'
     }`}>
       {/* Render the new collapsible sidebar only when mounted */}
@@ -154,10 +154,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col">
         {/* Header Section */}
-        <header className={`flex items-center justify-between p-3 border-b ${theme === 'dark' ? 'border-gray-800 bg-[#0f1117]' : 'border-gray-200 bg-gray-50'}`}> 
+        <header className={`flex items-center justify-between p-3 border-b ${theme === 'dark' ? 'border-gray-800 bg-[#0f1117]' : 'border-gray-200 bg-gray-50'}`}>
           <div className="flex items-center space-x-4 flex-wrap">
             <span className="font-semibold text-lg">CX Consulting AI</span>
-            
+
             {/* Model Management Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -186,8 +186,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <DropdownMenuItem disabled>No models found.</DropdownMenuItem>
                 ) : (
                   models.map(model => (
-                    <DropdownMenuItem 
-                      key={model.id} 
+                    <DropdownMenuItem
+                      key={model.id}
                       className="flex flex-col items-start p-2 !cursor-default" // Allow complex content
                       onSelect={(e) => e.preventDefault()} // Prevent closing on item interaction
                     >
@@ -221,7 +221,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                                   className="text-xs h-7 bg-blue-600 hover:bg-blue-700"
                               >
                                   {downloadingModel === model.id ? (
-                                      <Loader2 size={12} className="mr-1 animate-spin"/> 
+                                      <Loader2 size={12} className="mr-1 animate-spin"/>
                                   ) : (
                                       <Download size={12} className="mr-1" />
                                   )}
@@ -245,7 +245,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <Settings size={18}/>
             </Button> */}
             {/* User Info & Logout - Now uses the correctly typed user from context */}
-            {user && <span className='text-sm'>{user.username}</span>} 
+            {user && <span className='text-sm'>{user.username}</span>}
             <Button variant="ghost" size="icon" onClick={logout} title="Logout">
               <LogOut size={18}/>
             </Button>
@@ -254,8 +254,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Page Content */}
         <main className="flex-1 flex overflow-y-auto">
-          {/* Make children take full width/height */} 
-          <div className="flex-1 flex flex-col p-4 md:p-6"> 
+          {/* Make children take full width/height */}
+          <div className="flex-1 flex flex-col p-4 md:p-6">
              {children}
           </div>
         </main>
@@ -264,4 +264,4 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Right Sidebar Removed */}
     </div>
   );
-} 
+}

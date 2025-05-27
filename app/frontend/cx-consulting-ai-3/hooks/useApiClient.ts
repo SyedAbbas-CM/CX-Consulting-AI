@@ -106,10 +106,10 @@ export function useApiClient() {
 
   const askQuestion = async (query: string) => {
     setState((prev) => ({ ...prev, loading: true, error: null }));
-    
+
     // Create timestamp
     const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    
+
     // Add user message to conversation
     setState((prev) => ({
       ...prev,
@@ -126,7 +126,7 @@ export function useApiClient() {
       // Only pass conversation ID if it's not null
       const conversationId = state.conversation.id || undefined;
       const response = await api.askQuestion(query, conversationId);
-      
+
       // Add assistant response to conversation
       setState((prev) => ({
         ...prev,
@@ -135,10 +135,10 @@ export function useApiClient() {
           id: response.conversation_id,
           messages: [
             ...prev.conversation.messages,
-            { 
-              role: 'assistant', 
+            {
+              role: 'assistant',
               content: response.answer,
-              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             },
           ],
         },
@@ -186,10 +186,10 @@ export function useApiClient() {
         challenges,
         conversationId
       );
-      
+
       // Create timestamp
       const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      
+
       setState((prev) => ({
         ...prev,
         loading: false,
@@ -233,10 +233,10 @@ export function useApiClient() {
         currentMetrics,
         conversationId
       );
-      
+
       // Create timestamp
       const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      
+
       setState((prev) => ({
         ...prev,
         loading: false,
@@ -280,10 +280,10 @@ export function useApiClient() {
         scenario,
         conversationId
       );
-      
+
       // Create timestamp
       const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      
+
       setState((prev) => ({
         ...prev,
         loading: false,
@@ -358,4 +358,4 @@ export function useApiClient() {
     getConversations,
     deleteConversation,
   };
-} 
+}

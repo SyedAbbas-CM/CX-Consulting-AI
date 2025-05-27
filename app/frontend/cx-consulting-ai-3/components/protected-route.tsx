@@ -12,16 +12,16 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const router = useRouter()
   const pathname = usePathname()
   const { user, isLoading } = useAuth()
-  
+
   useEffect(() => {
     // Skip auth check if already on login or register page
     const isAuthPage = pathname === "/login" || pathname === "/register"
-    
+
     if (!isLoading && !user && !isAuthPage) {
       router.push("/login")
     }
   }, [user, isLoading, router, pathname])
-  
+
   // Show loading state or render children
   if (isLoading) {
     return (
@@ -30,6 +30,6 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
       </div>
     )
   }
-  
+
   return <>{children}</>
-} 
+}

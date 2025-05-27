@@ -29,20 +29,20 @@ export default function RegisterPage() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
-    
+
     if (!name || !email || !password) {
       setError("Please fill in all required fields")
       return
     }
-    
+
     if (!agreeTerms) {
       setError("You must agree to the Terms of Service and Privacy Policy")
       return
     }
-    
+
     try {
       const success = await register(name, email, password)
-      
+
       if (success) {
         // Registration successful, redirect to login
         router.push("/login?registered=true")

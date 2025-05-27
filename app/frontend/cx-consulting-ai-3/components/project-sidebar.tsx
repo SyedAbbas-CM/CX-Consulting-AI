@@ -8,14 +8,14 @@ import { useChatStore } from '../store/chatStore'; // Import chat store
 import { createProject, createChat, deleteChat } from '../lib/apiClient'; // Import API functions
 import { ProjectCreateRequest } from "../types/project"; // Import type
 // Import UI components for the dialog
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogTrigger 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogTrigger
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,28 +27,28 @@ interface ProjectSidebarProps {
 }
 
 export default function ProjectSidebar({ theme }: ProjectSidebarProps) {
-  // --- Zustand State --- 
-  const { 
-    projects, 
-    currentProjectId, 
-    isLoadingProjects, 
-    fetchProjects, 
-    addProject, 
-    setCurrentProjectId 
+  // --- Zustand State ---
+  const {
+    projects,
+    currentProjectId,
+    isLoadingProjects,
+    fetchProjects,
+    addProject,
+    setCurrentProjectId
   } = useProjectStore();
 
-  const { 
-    chats, 
-    currentChatId, 
-    isLoadingChats, 
-    fetchChats, 
-    addChat, 
-    removeChat, 
+  const {
+    chats,
+    currentChatId,
+    isLoadingChats,
+    fetchChats,
+    addChat,
+    removeChat,
     setCurrentChatId,
     setProjectId: setChatStoreProjectId // Rename to avoid conflict
   } = useChatStore();
 
-  // --- Local Component State --- 
+  // --- Local Component State ---
   const [isCreatingProject, setIsCreatingProject] = useState<boolean>(false);
   const [isCreatingChat, setIsCreatingChat] = useState<boolean>(false);
   const [deletingChatId, setDeletingChatId] = useState<string | null>(null);
@@ -56,7 +56,7 @@ export default function ProjectSidebar({ theme }: ProjectSidebarProps) {
   const [newProjectData, setNewProjectData] = useState<Partial<ProjectCreateRequest>>({});
   const { toast } = useToast();
 
-  // --- Effects --- 
+  // --- Effects ---
   // Fetch projects on component mount
   useEffect(() => {
     fetchProjects();
@@ -70,13 +70,13 @@ export default function ProjectSidebar({ theme }: ProjectSidebarProps) {
     }
   }, [currentProjectId, fetchChats, setChatStoreProjectId]);
 
-  // --- Handlers (Copied/Adapted from sidebar.tsx) --- 
+  // --- Handlers (Copied/Adapted from sidebar.tsx) ---
   const handleNewProjectSubmit = async () => {
     // Validate required fields
     if (!newProjectData.name || !newProjectData.client_name || !newProjectData.industry || !newProjectData.description) {
-      toast({ 
-        variant: "destructive", 
-        title: "Missing Information", 
+      toast({
+        variant: "destructive",
+        title: "Missing Information",
         description: "Please fill out all required project fields."
       });
       return;
@@ -92,7 +92,7 @@ export default function ProjectSidebar({ theme }: ProjectSidebarProps) {
       setShowNewProjectDialog(false); // Close dialog on success
       setNewProjectData({}); // Clear form
       toast({ title: "Project Created", description: `Project "${newProject.name}" created successfully.` });
-    } catch (error: any) { 
+    } catch (error: any) {
       console.error("Failed to create project:", error);
       const errorMessage = error?.errorData?.detail || error?.message || "An unknown error occurred.";
       // alert(`Error creating project: ${errorMessage}`);
@@ -111,8 +111,8 @@ export default function ProjectSidebar({ theme }: ProjectSidebarProps) {
     try {
       const newChat = await createChat(currentProjectId);
       addChat(newChat);
-      setCurrentChatId(newChat.id); // Select the new chat
-    } catch (error: any) { 
+      setCurrentChatId(newChat.chat_id); // Select the new chat
+    } catch (error: any) {
       console.error("Failed to create new chat:", error);
       const errorMessage = error?.errorData?.detail || error?.message || "An unknown error occurred.";
       alert(`Error creating chat: ${errorMessage}`);
@@ -128,23 +128,23 @@ export default function ProjectSidebar({ theme }: ProjectSidebarProps) {
       alert("Cannot delete chat: No project selected."); // Simple alert for this component
       return;
     }
-    if (window.confirm(`Are you sure you want to delete the chat \"${chatTitle}\"?`)) {
+    if (window.confirm(`Are you sure you want to delete the chat "${chatTitle}"?`)) {
       setDeletingChatId(chatIdToDelete);
       try {
         // Pass currentProjectId to the updated deleteChat function
         await deleteChat(currentProjectId, chatIdToDelete);
         removeChat(chatIdToDelete);
-      } catch (error: any) { 
+      } catch (error: any) {
         console.error("Failed to delete chat:", error);
         const errorMessage = error?.errorData?.detail || error?.message || "An unknown error occurred.";
         alert(`Error deleting chat: ${errorMessage}`);
       } finally {
         setDeletingChatId(null);
-      } 
+      }
     }
   };
 
-  // --- JSX --- 
+  // --- JSX ---
   return (
     <aside
       className={`w-72 border-r ${theme === "dark" ? "border-gray-800 bg-[#0f1117]" : "border-gray-200 bg-gray-50"} p-4 flex flex-col`} // Adjusted width/padding/colors slightly
@@ -185,9 +185,9 @@ export default function ProjectSidebar({ theme }: ProjectSidebarProps) {
                   key={project.id}
                   // Connect project selection to setCurrentProjectId
                   onClick={() => setCurrentProjectId(project.id)}
-                  className={`p-2 rounded-md flex items-center cursor-pointer ${ 
-                    currentProjectId === project.id ? 
-                      (theme === "dark" ? "bg-gray-700" : "bg-gray-200") 
+                  className={`p-2 rounded-md flex items-center cursor-pointer ${
+                    currentProjectId === project.id ?
+                      (theme === "dark" ? "bg-gray-700" : "bg-gray-200")
                       : (theme === "dark" ? "hover:bg-gray-800" : "hover:bg-gray-100")
                   }`}
                 >
@@ -217,52 +217,52 @@ export default function ProjectSidebar({ theme }: ProjectSidebarProps) {
               <Label htmlFor="projectName" className="text-right">
                 Name*
               </Label>
-              <Input 
-                id="projectName" 
-                value={newProjectData.name || ''} 
-                onChange={(e) => setNewProjectData({...newProjectData, name: e.target.value})} 
-                className="col-span-3" 
+              <Input
+                id="projectName"
+                value={newProjectData.name || ''}
+                onChange={(e) => setNewProjectData({...newProjectData, name: e.target.value})}
+                className="col-span-3"
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="clientName" className="text-right">
                 Client Name*
               </Label>
-              <Input 
-                id="clientName" 
-                value={newProjectData.client_name || ''} 
-                onChange={(e) => setNewProjectData({...newProjectData, client_name: e.target.value})} 
-                className="col-span-3" 
+              <Input
+                id="clientName"
+                value={newProjectData.client_name || ''}
+                onChange={(e) => setNewProjectData({...newProjectData, client_name: e.target.value})}
+                className="col-span-3"
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="industry" className="text-right">
                 Industry*
               </Label>
-              <Input 
-                id="industry" 
-                value={newProjectData.industry || ''} 
-                onChange={(e) => setNewProjectData({...newProjectData, industry: e.target.value})} 
-                className="col-span-3" 
+              <Input
+                id="industry"
+                value={newProjectData.industry || ''}
+                onChange={(e) => setNewProjectData({...newProjectData, industry: e.target.value})}
+                className="col-span-3"
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="description" className="text-right">
                 Description*
               </Label>
-              <Textarea 
-                id="description" 
-                value={newProjectData.description || ''} 
-                onChange={(e) => setNewProjectData({...newProjectData, description: e.target.value})} 
-                className="col-span-3" 
+              <Textarea
+                id="description"
+                value={newProjectData.description || ''}
+                onChange={(e) => setNewProjectData({...newProjectData, description: e.target.value})}
+                className="col-span-3"
                 rows={3}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button 
-              type="submit" 
-              onClick={handleNewProjectSubmit} 
+            <Button
+              type="submit"
+              onClick={handleNewProjectSubmit}
               disabled={isCreatingProject}
             >
               {isCreatingProject ? <Loader2 size={16} className="mr-2 animate-spin" /> : null}
@@ -281,44 +281,44 @@ export default function ProjectSidebar({ theme }: ProjectSidebarProps) {
             <div className="text-center text-xs py-4 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}">Loading chats...</div>
         ) : (
             <div className="space-y-1">
-              {/* Filter chats for the currently selected project */} 
+              {/* Filter chats for the currently selected project */}
               {chats
                 .filter(chat => chat.project_id === currentProjectId)
                 .map((chat) => (
                 <div
                   // Connect chat selection to setCurrentChatId
-                  key={chat.id} 
-                  className={`p-2 rounded-md flex items-center justify-between cursor-pointer group ${ 
-                    currentChatId === chat.id ? 
-                      (theme === "dark" ? "bg-gray-700" : "bg-gray-200") 
+                  key={chat.chat_id}
+                  className={`p-2 rounded-md flex items-center justify-between cursor-pointer group ${
+                    currentChatId === chat.chat_id ?
+                      (theme === "dark" ? "bg-gray-700" : "bg-gray-200")
                       : (theme === "dark" ? "hover:bg-gray-800" : "hover:bg-gray-100")
                   }`}
                 >
-                  <div className="flex items-center truncate mr-1" onClick={() => setCurrentChatId(chat.id)}>
+                  <div className="flex items-center truncate mr-1" onClick={() => setCurrentChatId(chat.chat_id)}>
                     {/* <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center mr-2 flex-shrink-0">
                       <span className="text-white text-xs">AI</span>
-                    </div> */} 
+                    </div> */}
                     <MessageSquare size={16} className="mr-2 flex-shrink-0 text-gray-500"/>
                     <div className="truncate">
-                      <p className="text-sm truncate" title={chat.title}>{chat.title}</p>
+                      <p className="text-sm truncate" title={chat.name}>{chat.name}</p>
                       <p className={`text-xs ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>
                           {new Date(chat.last_updated_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}, {new Date(chat.last_updated_at).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
                       </p>
                     </div>
                   </div>
-                  {/* Add Delete Button */} 
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className={`h-6 w-6 text-gray-500 hover:text-red-500 invisible group-hover:visible flex-shrink-0 ${deletingChatId === chat.id ? 'text-red-500' : ''}`}
-                    onClick={(e) => { e.stopPropagation(); handleDeleteChat(chat.id, chat.title); }} 
-                    disabled={deletingChatId === chat.id}
+                  {/* Add Delete Button */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={`h-6 w-6 text-gray-500 hover:text-red-500 invisible group-hover:visible flex-shrink-0 ${deletingChatId === chat.chat_id ? 'text-red-500' : ''}`}
+                    onClick={(e) => { e.stopPropagation(); handleDeleteChat(chat.chat_id, chat.name); }}
+                    disabled={deletingChatId === chat.chat_id}
                   >
-                    {deletingChatId === chat.id ? <Loader2 size={14} className="animate-spin"/> : <Trash2 size={14} />}
+                    {deletingChatId === chat.chat_id ? <Loader2 size={14} className="animate-spin"/> : <Trash2 size={14} />}
                   </Button>
                 </div>
               ))}
-              {currentProjectId && chats.filter(chat => chat.project_id === currentProjectId).length === 0 && 
+              {currentProjectId && chats.filter(chat => chat.project_id === currentProjectId).length === 0 &&
                   <p className="text-xs text-center py-2 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}">(No chats in this project)</p>}
             </div>
         )}
