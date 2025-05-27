@@ -1,0 +1,77 @@
+name: Trivy Code Scan
+
+on:
+  push:
+    branches: [ main, staging, dev ]
+  pull_request:
+    branches: [ main, staging, dev ]
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write  # Required to comment on PRs
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Run Trivy Scan and Save Output
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'table'
+        output: 'trivy-report.md'
+        exit-code: '0'  # Do not fail the workflow
+        ignore-unfixed: true
+        vuln-type: 'os,library'
+        scanners: 'vuln,secret,config'
+
+    - name: Run Trivy Summary for Severity Counts
+      id: severity_summary
+      run: |
+        trivy fs . --format json --scanners vuln,secret,config > summary.json
+
+        CRITICAL=$(jq '[.Results[].Vulnerabilities[]? | select(.Severity == "CRITICAL")] | length' summary.json)
+        HIGH=$(jq '[.Results[].Vulnerabilities[]? | select(.Severity == "HIGH")] | length' summary.json)
+        MEDIUM=$(jq '[.Results[].Vulnerabilities[]? | select(.Severity == "MEDIUM")] | length' summary.json)
+        LOW=$(jq '[.Results[].Vulnerabilities[]? | select(.Severity == "LOW")] | length' summary.json)
+        UNKNOWN=$(jq '[.Results[].Vulnerabilities[]? | select(.Severity == "UNKNOWN")] | length' summary.json)
+
+        echo "CRITICAL=$CRITICAL" >> $GITHUB_OUTPUT
+        echo "HIGH=$HIGH" >> $GITHUB_OUTPUT
+        echo "MEDIUM=$MEDIUM" >> $GITHUB_OUTPUT
+        echo "LOW=$LOW" >> $GITHUB_OUTPUT
+        echo "UNKNOWN=$UNKNOWN" >> $GITHUB_OUTPUT
+
+    - name: Read Trivy Markdown Report as Variable
+      id: trivy_report
+      run: |
+        echo "content<<EOF" >> $GITHUB_OUTPUT
+        cat trivy-report.md >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+    - name: Comment on PR with Trivy Results
+      if: ${{ github.event_name == 'pull_request' }}
+      uses: peter-evans/create-or-update-comment@v4
+      with:
+        issue-number: ${{ github.event.pull_request.number }}
+        body: |
+          ## 🛡️ Trivy Vulnerability Scan Summary
+
+          **🟥 CRITICAL**: ${{ steps.severity_summary.outputs.CRITICAL }}  
+          **🟧 HIGH**: ${{ steps.severity_summary.outputs.HIGH }}  
+          **🟨 MEDIUM**: ${{ steps.severity_summary.outputs.MEDIUM }}  
+          **🟦 LOW**: ${{ steps.severity_summary.outputs.LOW }}  
+          **⬜ UNKNOWN**: ${{ steps.severity_summary.outputs.UNKNOWN }}
+
+          <details>
+          <summary>📋 Full Trivy Report (Click to Expand)</summary>
+
+          ```
+          ${{ steps.trivy_report.outputs.content }}
+          ```
+
+          </details>
