@@ -1,85 +1,104 @@
-# Core dependencies
-fastapi>=0.104.0
-uvicorn>=0.23.2
-pydantic>=2.4.2
-python-dotenv>=1.0.0
-requests>=2.31.0
-aiohttp>=3.8.6
-httpx>=0.25.1
+# CX Consulting AI - Core Dependencies
+# Generated based on actual working environment versions
 
-# LLM dependencies
-vllm>=0.2.0
-transformers>=4.36.0
-torch>=2.0.0
-tokenizers>=0.15.0
-accelerate>=0.25.0
-starlette-prometheus
-    prometheus-client
+# ===== WEB FRAMEWORK & API =====
+fastapi==0.115.4
+uvicorn[standard]==0.32.0
+starlette==0.41.2
+python-multipart==0.0.12
 
-# Embedding and vector store dependencies
-sentence-transformers>=2.2.2
-faiss-cpu>=1.7.4
-chromadb>=0.4.18
+# ===== DATA VALIDATION & SETTINGS =====
+pydantic==2.10.3
+pydantic-settings==2.6.1
+pydantic_core==2.27.1
 
-# ONNX acceleration (optional)
-onnx>=1.14.0
-onnxruntime>=1.15.1
-# For Apple Silicon optimized version: onnxruntime-silicon>=1.15.0
+# ===== LLM & AI MODELS =====
+llama-cpp-python==0.3.1
+transformers==4.46.3
+sentence-transformers==3.3.0
+tiktoken==0.8.0
+torch==2.5.1
+torchaudio==2.5.1
+torchvision==0.20.1
 
-# Document processing
-langchain>=0.0.310
-langchain-community>=0.0.9
-langchainhub>=0.1.14
-bs4>=0.0.1
-pypdf>=3.17.1
-pdfminer.six>=20221105
-unstructured[pdf]>=0.12.0
-tiktoken>=0.7.0
-pdf2image
-pytesseract
-pillow
-PyMuPDF # For fitz, PDF text extraction
-pdfplumber # PDF text extraction fallback
-python-docx # For .docx file processing
-openpyxl # For .xlsx file processing with pandas
-xlrd # For .xls file processing with pandas (older Excel format)
+# ===== VECTOR DATABASE & RETRIEVAL =====
+chromadb==0.5.18
+chroma-hnswlib==0.7.6
+rank_bm25==0.2.2
 
-# Data handling
-numpy>=1.24.0
-pandas>=2.0.0
-pyyaml>=6.0.1
-jsonschema>=4.19.1
+# ===== EMBEDDINGS & ML =====
+numpy==1.26.4
+scikit-learn>=1.3.0
+scipy>=1.11.0
+huggingface-hub==0.26.2
+safetensors==0.4.5
+tokenizers==0.20.3
 
-# Optional: Memory management with Redis
-redis>=5.0.1
-fakeredis>=2.20.0
+# ===== MEMORY & CACHING =====
+redis==5.2.0
 
-# Optional: Monitoring and telemetry
-prometheus-fastapi-instrumentator>=6.1.0
-opentelemetry-api>=1.20.0
-opentelemetry-sdk>=1.20.0
-opentelemetry-exporter-otlp>=1.20.0
+# ===== DOCUMENT PROCESSING =====
+pypdf==5.1.0
+docx2txt==0.8
+openpyxl>=3.0.10
+python-magic==0.4.27
+pillow>=10.0.0
+beautifulsoup4>=4.12.0
 
-# Utilities
-tqdm>=4.66.1
-loguru>=0.7.2
-werkzeug>=3.0.0
+# ===== HTTP & NETWORKING =====
+requests==2.32.3
+httpx>=0.26.0
+httpcore>=1.0.0
+aiohttp>=3.9.0
+aiofiles==24.1.0
 
-# Testing
-pytest>=7.4.3
-pytest-asyncio>=0.21.1
+# ===== AUTHENTICATION & SECURITY =====
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+bcrypt>=4.0.1
 
-# Authentication dependencies
-python-jose>=3.3.0  # For JWT tokens
-passlib>=1.7.4      # For password hashing
-bcrypt>=4.0.1       # For bcrypt algorithm
-python-multipart>=0.0.6  # For form data parsing
+# ===== DATABASE =====
+SQLAlchemy>=2.0.0
 
-# Add tenacity for retry logic
-tenacity
+# ===== CONFIGURATION & ENVIRONMENT =====
+python-dotenv>=0.21.0
+PyYAML>=6.0.0
 
-# Add rank_bm25
-rank_bm25
+# ===== ASYNC & CONCURRENCY =====
+tenacity>=8.0.0
 
-# For llamacpp (optional, install manually if needed with specific CMAKE_ARGS)
-# llama-cpp-python==0.2.68 # Requires BLAS to be installed, e.g. via OpenBLAS or Accelerate framework
+# ===== TEMPLATING =====
+Jinja2>=3.1.0
+
+# ===== LOGGING & MONITORING =====
+coloredlogs==15.0.1
+rich>=13.0.0
+prometheus-fastapi-instrumentator==7.1.0
+
+# ===== UTILITIES =====
+click>=8.1.0
+typer>=0.9.0
+tqdm>=4.65.0
+python-dateutil>=2.8.0
+regex>=2023.10.0
+
+# ===== FILE PROCESSING =====
+filelock>=3.13.0
+pathspec>=0.10.0
+
+# ===== DEVELOPMENT & TESTING =====
+pytest>=7.4.0
+pytest-asyncio>=0.26.0
+black>=23.11.0
+
+# ===== OPTIONAL: CLOUD INTEGRATIONS =====
+# Uncomment if using Azure services
+# openai==1.74.0
+# azure-storage-blob==12.19.0
+# azure-search-documents==11.4.0
+
+# ===== OPTIONAL: ADDITIONAL DOCUMENT FORMATS =====
+# Uncomment if processing additional formats
+# unstructured==0.17.2
+# pdf2image==1.17.0
+# pytesseract==0.3.13

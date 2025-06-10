@@ -93,7 +93,9 @@ class Settings(BaseSettings):
     BGE_MODEL_NAME: str = "BAAI/bge-large-en-v1.5"
     CROSS_ENCODER_MODEL: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
     RERANK_THRESHOLD: float = 0.4
-    EMBEDDING_DEVICE: str = "mps"  # Default to MPS for Apple Silicon
+    EMBEDDING_DEVICE: str = os.getenv(
+        "EMBEDDING_DEVICE", "auto"
+    )  # Auto-detect by default
 
     # ONNX settings
     ONNX_MODEL_PATH: str = "models/bge-small-en-v1.5.onnx"

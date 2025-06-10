@@ -1,3 +1,12 @@
+#!/bin/bash
+
+# Script to update frontend configuration for AWS backend
+AWS_BACKEND_URL="http://ec2-13-60-53-103.eu-north-1.compute.amazonaws.com:8000"
+
+echo "🔧 Updating frontend configuration for AWS backend..."
+
+# Update the lib/api.ts file to use environment variable properly
+cat > app/frontend/cx-consulting-ai-3/lib/api.ts << 'EOF'
 /**
  * API client for communicating with the CX Consulting AI backend
  */
@@ -317,3 +326,28 @@ export async function checkHealth(): Promise<{ status: string; model: string; ve
 
   return response.json();
 }
+EOF
+
+# Create environment files for different deployments
+echo "📝 Creating environment configuration files..."
+
+# Production environment file for Azure Static Web Apps
+cat > app/frontend/cx-consulting-ai-3/.env.production << EOF
+NEXT_PUBLIC_API_URL=${AWS_BACKEND_URL}
+EOF
+
+# Local development environment file
+cat > app/frontend/cx-consulting-ai-3/.env.local << EOF
+NEXT_PUBLIC_API_URL=http://localhost:8000
+EOF
+
+echo "✅ Frontend configuration updated!"
+echo ""
+echo "📋 Deployment Instructions:"
+echo "1. For Azure Static Web Apps, set this environment variable:"
+echo "   NEXT_PUBLIC_API_URL=${AWS_BACKEND_URL}"
+echo ""
+echo "2. Or rebuild and deploy with:"
+echo "   cd app/frontend/cx-consulting-ai-3"
+echo "   npm run build"
+echo "   # Then deploy the built files to Azure"
