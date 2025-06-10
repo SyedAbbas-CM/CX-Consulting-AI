@@ -35,7 +35,7 @@ jobs:
           cd app/frontend/cx-consulting-ai-3
           npm run build
         env:
-          NEXT_PUBLIC_API_BASE_URL: http://ec2-56-228-25-196.eu-north-1.compute.amazonaws.com:8000/api
+          NEXT_PUBLIC_API_BASE_URL: http://ec2-51-20-53-151.eu-north-1.compute.amazonaws.com:8000/api
 
       - name: Build And Deploy
         id: builddeploy
@@ -49,7 +49,7 @@ jobs:
           output_location: "out"
           skip_app_build: true
         env:
-          NEXT_PUBLIC_API_BASE_URL: http://ec2-56-228-25-196.eu-north-1.compute.amazonaws.com:8000/api
+          NEXT_PUBLIC_API_BASE_URL: http://ec2-51-20-53-151.eu-north-1.compute.amazonaws.com:8000/api
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'

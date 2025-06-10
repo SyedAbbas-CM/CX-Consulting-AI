@@ -4,7 +4,7 @@
 echo "Configuring frontend for Azure deployment with AWS backend..."
 
 # Set the API base URL for production
-export NEXT_PUBLIC_API_BASE_URL="http://ec2-56-228-25-196.eu-north-1.compute.amazonaws.com:8000/api"
+export NEXT_PUBLIC_API_BASE_URL="http://ec2-51-20-53-151.eu-north-1.compute.amazonaws.com:8000/api"
 
 echo "Frontend configured to use AWS backend: $NEXT_PUBLIC_API_BASE_URL"
 
