@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Script to update frontend configuration for AWS backend
-AWS_BACKEND_URL="http://ec2-13-60-53-103.eu-north-1.compute.amazonaws.com:8000"
+AWS_BACKEND_URL="http://ec2-56-228-25-196.eu-north-1.compute.amazonaws.com:8000"
 
 echo "🔧 Updating frontend configuration for AWS backend..."
 
