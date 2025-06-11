@@ -3,7 +3,7 @@
  */
 
 // Use environment variable if available, otherwise default to localhost for development
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/+$/, "") || 'http://ec2-51-20-53-151.eu-north-1.compute.amazonaws.com:8000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/+$/, "") || 'http://localhost:8000';
 
 // Types
 export interface SearchResult {
