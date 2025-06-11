@@ -1233,14 +1233,78 @@ async def health_check(
     if redis_status == "unhealthy":
         overall_status = "unhealthy"
 
-    # Check LLM Service (simple generation test)
+    # Check LLM Service status (without generation test to avoid timeouts)
+    llm_status = "healthy" if llm_service else "unhealthy"
+    llm_details = (
+        "LLM service available" if llm_service else "LLM service not initialized"
+    )
+
+    health_status["checks"].append(
+        {
+            "service": "llm_service",
+            "status": llm_status,
+            "details": llm_details,
+            "backend": getattr(llm_service, "backend", "unknown"),
+            "model_id": getattr(llm_service, "model_id", "unknown"),
+        }
+    )
+
+    health_status["status"] = overall_status
+    health_status["check_duration_ms"] = (time.time() - start_time) * 1000
+
+    if overall_status == "unhealthy":
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=health_status
+        )
+
+    return health_status
+
+
+# Add a detailed health endpoint for LLM testing
+@router.get("/health/detailed", tags=["Health"], response_model=Dict[str, Any])
+async def detailed_health_check(
+    chat_service: ChatServiceDep,
+    llm_service: LLMServiceDep,
+):
+    """Detailed health check that includes LLM generation test (slower)."""
+    import time
+
+    start_time = time.time()
+    health_status: Dict[str, Any] = {
+        "status": "healthy",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "checks": [],
+    }
+    overall_status = "healthy"
+
+    # Check Redis via ChatService
+    redis_status = "unhealthy"
+    redis_details = "Connection failed or ping timeout"
+    try:
+        if await chat_service.redis_client.ping():
+            redis_status = "healthy"
+            redis_details = "Connected and responsive"
+    except Exception as e:
+        logger.error(f"Health check: Redis ping failed: {e}")
+        redis_details = f"Connection failed: {e}"
+
+    health_status["checks"].append(
+        {
+            "service": "redis (via ChatService)",
+            "status": redis_status,
+            "details": redis_details,
+        }
+    )
+    if redis_status == "unhealthy":
+        overall_status = "unhealthy"
+
+    # Check LLM Service (with generation test)
     llm_status = "unhealthy"
     llm_details = "LLM generation failed or timed out"
     try:
         # Simple test prompt
         test_prompt = "Health check prompt: respond OK."
         # Use a short timeout for the health check
-        # Use injected llm_service
         response = await asyncio.wait_for(
             llm_service.generate(prompt=test_prompt, max_tokens=5), timeout=10.0
         )
@@ -1262,17 +1326,12 @@ async def health_check(
             "service": "llm_service",
             "status": llm_status,
             "details": llm_details,
-            # Use injected llm_service
             "backend": llm_service.backend,
             "model_id": llm_service.model_id,
         }
     )
     if llm_status == "unhealthy":
-        # Degraded might be more appropriate than unhealthy if LLM is down
         overall_status = "degraded" if overall_status == "healthy" else overall_status
-
-    # TODO: Add checks for DocumentService (e.g., DB connection, embedding model status)
-    # TODO: Add checks for ProjectManager (e.g., storage access)
 
     health_status["status"] = overall_status
     health_status["check_duration_ms"] = (time.time() - start_time) * 1000
