@@ -2,8 +2,8 @@
  * API client for communicating with the CX Consulting AI backend
  */
 
-// Use environment variable if available, otherwise default to localhost for development
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+// For production, always use the AWS backend. For local development, you can override with NEXT_PUBLIC_API_URL
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://ec2-51-20-53-151.eu-north-1.compute.amazonaws.com:8000';
 
 // Types
 export interface SearchResult {
