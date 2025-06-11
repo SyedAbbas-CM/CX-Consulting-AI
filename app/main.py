@@ -93,18 +93,8 @@ app.add_middleware(AuthLoggingMiddleware)
 
 # Configure CORS
 if os.getenv("ENABLE_CORS", "true").lower() in ("true", "1", "t"):
-    origins = os.getenv("ALLOWED_ORIGINS", "*").split(",")
-    # Add common localhost ports for development
-    if "localhost" in str(origins) or "*" in str(origins):
-        origins = [
-            "http://localhost:3000",
-            "http://localhost:3001",
-            "http://localhost:3002",
-            "http://localhost:8000",
-            "http://localhost:8080",
-            "https://jolly-sand-08d33b71e.6.azurestaticapps.net",
-            "*",
-        ]
+    # Temporarily allow all origins for development
+    origins = ["*"]
     app.add_middleware(
         CORSMiddleware,
         allow_origins=origins,
