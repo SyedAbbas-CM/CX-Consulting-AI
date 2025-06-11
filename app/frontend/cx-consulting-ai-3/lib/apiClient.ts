@@ -58,7 +58,7 @@ import {
 
   // **Globals & helpers** ----------------------------------------
   const API_BASE_URL =
-    process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/+$/, "") || "/api";
+    process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/+$/, "") || "http://ec2-51-20-53-151.eu-north-1.compute.amazonaws.com:8000";
 
   const VERY_LONG_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes for RAG/Agent calls
 
