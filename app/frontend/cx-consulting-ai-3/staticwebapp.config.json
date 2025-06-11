@@ -8,7 +8,6 @@
     },
     {
       "route": "/api/*",
-      "rewrite": "http://ec2-51-20-53-151.eu-north-1.compute.amazonaws.com:8000/api/{*}",
       "allowedRoles": ["anonymous"]
     },
     {
