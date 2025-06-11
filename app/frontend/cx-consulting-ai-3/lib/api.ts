@@ -5,10 +5,6 @@
 // Use environment variable if available, otherwise default to localhost for development
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/+$/, "") || 'http://localhost:8000';
 
-// Debug logging
-console.log('🔧 API_BASE_URL:', API_BASE_URL);
-console.log('🔧 NEXT_PUBLIC_API_BASE_URL:', process.env.NEXT_PUBLIC_API_BASE_URL);
-
 // Types
 export interface SearchResult {
   source: string;
