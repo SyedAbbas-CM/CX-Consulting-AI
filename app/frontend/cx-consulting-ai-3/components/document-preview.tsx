@@ -33,16 +33,15 @@ export default function DocumentPreview({ theme }: DocumentPreviewProps) {
   const [isRefining, setIsRefining] = useState<boolean>(false);
 
   useEffect(() => {
-    // When currentProjectId changes, fetch documents for that project
-    if (currentProjectId && !isLoadingDocuments && documents.length === 0) { // Fetch only if no docs
+    // Only fetch documents when project ID changes, not when documents change
+    if (currentProjectId && !isLoadingDocuments) {
+      // Only fetch if we don't have documents for this project yet
       console.log("Document Preview: Project ID changed to", currentProjectId, ", fetching documents.");
       fetchDocumentsForProject(currentProjectId);
     } else if (!currentProjectId) {
-      // If no project is selected, clear any existing documents from the store
-      // useDocumentStore.getState().clearDocuments(); // Let projectStore handle this via its effect
       console.log("Document Preview: No project selected.");
     }
-  }, [currentProjectId, fetchDocumentsForProject, isLoadingDocuments, documents.length]);
+  }, [currentProjectId, fetchDocumentsForProject]); // Only depend on project ID and fetch function
 
   useEffect(() => {
     // When the store's currentDocumentContent changes (e.g., after fetch or save),
