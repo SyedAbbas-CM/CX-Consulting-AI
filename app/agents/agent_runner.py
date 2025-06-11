@@ -566,7 +566,7 @@ class AgentRunner:
             # Decide fallback behavior - maybe skip drafting/critique? Or try LLM directly?
             # For now, we proceed but Drafting agent should handle no context
         else:
-            logger.info(f"Retrieved {len(retrieved_context)} context chunks.")
+             logger.info(f"Retrieved {len(retrieved_context)} context chunks.")
 
         # 2. Get Chat History (Optional)
         chat_history = None
@@ -602,11 +602,11 @@ class AgentRunner:
         )
         pipeline_results["drafts"] = drafts
         if not drafts:
-            logger.error("Drafting agent failed to generate drafts.")
-            # Handle failure - maybe return an error or try a simpler response?
+             logger.error("Drafting agent failed to generate drafts.")
+             # Handle failure - maybe return an error or try a simpler response?
             return {"error": "Failed to generate response drafts."}
         else:
-            logger.info(f"Generated {len(drafts)} drafts.")
+             logger.info(f"Generated {len(drafts)} drafts.")
 
         # 4. Critique Drafts
         logger.debug("Agent Pipeline Step 3: Critiquing")
@@ -632,10 +632,10 @@ class AgentRunner:
 
         best_draft = drafts[best_draft_index]
         final_answer, sources = await self.finalizer_agent.finalize_answer(
-            query=query,
-            best_draft=best_draft,
-            critiques=critiques,
-            retrieved_context=retrieved_context,
+             query=query,
+             best_draft=best_draft,
+             critiques=critiques,
+             retrieved_context=retrieved_context,
             chat_history=chat_history,
         )
         pipeline_results["final_answer"] = final_answer
