@@ -46,7 +46,7 @@ jobs:
           github_id_token: ${{ steps.idtoken.outputs.result }}
           ###### End of Repository/Build Configurations ######
         env:
-          NEXT_PUBLIC_API_BASE_URL: "https://ec2-51-20-53-151.eu-north-1.compute.amazonaws.com"
+          NEXT_PUBLIC_API_BASE_URL: "https://rm-agent-vehicle-aa.trycloudflare.com"
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
