@@ -13,7 +13,7 @@ import jwt
 from dotenv import load_dotenv
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from jwt import ExpiredSignatureError, PyJWTError
+from jwt import ExpiredSignatureError, InvalidTokenError
 from passlib.context import CryptContext
 from pydantic import BaseModel  # For User model
 
@@ -491,7 +491,7 @@ class AuthService:
                 "Token verification failed: Expired signature"
             )  # Log specific error
             return None
-        except PyJWTError as e:
+        except InvalidTokenError as e:
             logger.warning(
                 f"Token verification failed: {type(e).__name__} - {str(e)}"
             )  # Log other JWT errors
