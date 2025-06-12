@@ -90,3 +90,9 @@ coverage.xml
 
 # Add other specific large files or temp directories if needed
 node_modules
+
+# Shared Assets - Large Files
+shared_assets_*
+cx_consulting_ai_complete_*
+*.gguf
+models/*.gguf
