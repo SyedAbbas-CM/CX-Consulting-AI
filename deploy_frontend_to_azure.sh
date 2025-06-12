@@ -7,7 +7,7 @@ echo "🚀 Deploying frontend to Azure Static Web Apps..."
 cd app/frontend/cx-consulting-ai-3
 
 # Set environment variable for build
-export NEXT_PUBLIC_API_URL="http://ec2-51-20-53-151.eu-north-1.compute.amazonaws.com:8000"
+export NEXT_PUBLIC_API_URL="https://ec2-51-20-53-151.eu-north-1.compute.amazonaws.com"
 
 echo "✅ Environment configured:"
 echo "   NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL"
