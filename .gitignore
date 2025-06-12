@@ -97,3 +97,4 @@ cx_consulting_ai_complete_*
 *.gguf
 models/*.gguf
 app/data/vectorstore.zip
+app/data/vectorstore.zip
