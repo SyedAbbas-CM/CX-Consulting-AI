@@ -331,7 +331,7 @@ async def upload_document(
             f"Error in legacy upload_document for {file.filename}: {e}", exc_info=True
         )
         if temp_file_path_obj and temp_file_path_obj.exists():
-                    logger.debug(
+            logger.debug(
                 f"Cleaning up temporary upload file (general exception): {temp_file_path_obj}"
             )
             try:
@@ -394,8 +394,8 @@ async def ask_question(
     )  # More accurate start time for this specific path
 
     try:
-        # --- Start main processing block --- 
-        
+        # --- Start main processing block ---
+
         # Check for client disconnect before proceeding (G2)
         if await http_request.is_disconnected():
             logger.warning(
@@ -427,11 +427,11 @@ async def ask_question(
                 )
 
                 # ------- add the user's turn to history -------
-        if conversation_id:
-            await chat_service.add_message_to_chat(
-                chat_id=conversation_id,
-                project_id=question_request.project_id,
-                role="user",
+                if conversation_id:
+                    await chat_service.add_message_to_chat(
+                        chat_id=conversation_id,
+                        project_id=question_request.project_id,
+                        role="user",
                         content=question_request.query,
                         user_id=user_id,
                     )
@@ -581,7 +581,7 @@ async def ask_question(
                 else:
                     latest_doc_summary = (
                         await project_manager.get_latest_document_summary(
-                project_id=question_request.project_id,
+                            project_id=question_request.project_id,
                             user_id=current_user[
                                 "id"
                             ],  # Pass user_id for potential filtering
@@ -661,9 +661,9 @@ async def ask_question(
                 logger.info(f"Handling RAG/QA for query: '{query_for_engine[:50]}...'")
                 try:
                     rag_response = await rag_engine.ask(
-                    question=query_for_engine,
+                        question=query_for_engine,
                         conversation_id=question_request.conversation_id,
-                    project_id=question_request.project_id,
+                        project_id=question_request.project_id,
                         user_id=user_id,
                         retrieval_active=True,
                     )
@@ -711,9 +711,9 @@ async def ask_question(
                     logger.error(f"Error handling RAG/QA: {e}", exc_info=True)
                     raise HTTPException(
                         status_code=500, detail=f"Failed to handle RAG/QA: {str(e)}"
-                )
+                    )
         # --- End Workstream 5 mode-based handling ---
-            
+
         # Check for disconnect *after* RAG/Agent call finishes (G2)
         if await http_request.is_disconnected():
             logger.warning(
@@ -788,7 +788,7 @@ async def ask_question(
             "intent": "unhandled_endpoint_error",
             # Ensure conversation_id is a string, even in error cases, if the model expects it.
             # If conversation_id was not established before the error, use a placeholder or empty string.
-            "conversation_id": conversation_id if conversation_id is not None else "", 
+            "conversation_id": conversation_id if conversation_id is not None else "",
             "project_id": (
                 question_request.project_id if question_request else "unknown_project"
             ),
@@ -798,7 +798,7 @@ async def ask_question(
 
     # Final response handling:
     processing_time_calculated = time.perf_counter() - start_time
-    
+
     # Check for timeout error from RAG engine (G1)
     if response_data.get("error") == "timeout":
         logger.warning(
@@ -813,7 +813,7 @@ async def ask_question(
                 "processing_time": processing_time_calculated,
             },
         )
-        
+
     # Check for template rendering error from RAG engine (G3)
     if response_data.get("error") == "template_render":
         logger.warning(
@@ -883,14 +883,14 @@ async def generate_cx_strategy(
         # For now, assume they are the same. The literal for CXStrategyRequest could be 'cx_strategy' or 'proposal'.
         # Let's use 'cx_strategy' to match the endpoint and task_type.
         doc_gen_config = DocumentGenerationConfig(
-            deliverable_type="cx_strategy", 
+            deliverable_type="cx_strategy",
             parameters=request.model_dump(
                 exclude={"project_id", "conversation_id", "query"}
             ),  # query might not exist on this model
         )
 
         agent_result = await agent_runner.run(
-            task_type="cx_strategy", 
+            task_type="cx_strategy",
             query=json.dumps(
                 request.model_dump()
             ),  # Pass full request as JSON string for now
@@ -907,10 +907,10 @@ async def generate_cx_strategy(
         # Persist the document
         persisted_doc_id = await project_manager.create_document(
             project_id=project_id,
-            user_id=user_id, 
-            title=f"CX Strategy for {request.client_name}", 
+            user_id=user_id,
+            title=f"CX Strategy for {request.client_name}",
             content=final_content,
-            document_type="cx_strategy", 
+            document_type="cx_strategy",
             metadata={
                 "generated_by": "AgentRunner",
                 "task_type": "cx_strategy",
@@ -918,7 +918,7 @@ async def generate_cx_strategy(
                 "original_request": request.model_dump(),
             },
         )
-        
+
         processing_time = time.time() - start_time
         return DeliverableResponse(
             content=final_content,
@@ -959,15 +959,15 @@ async def generate_roi_analysis(
     logger.info(
         f"ROI analysis generation requested for project {project_id} by user {user_id} via AgentRunner."
     )
-    
+
     try:
         doc_gen_config = DocumentGenerationConfig(
-            deliverable_type="roi_analysis", 
+            deliverable_type="roi_analysis",
             parameters=request.model_dump(exclude={"project_id", "conversation_id"}),
         )
 
         agent_result = await agent_runner.run(
-            task_type="roi_analysis", 
+            task_type="roi_analysis",
             query=json.dumps(request.model_dump()),
             project_id=project_id,
             conversation_id=request.conversation_id,  # Pass conversation_id
@@ -991,7 +991,7 @@ async def generate_roi_analysis(
                 "original_request": request.model_dump(),
             },
         )
-        
+
         processing_time = time.time() - start_time
         return DeliverableResponse(
             content=final_content,
@@ -1034,12 +1034,12 @@ async def generate_journey_map(
 
     try:
         doc_gen_config = DocumentGenerationConfig(
-            deliverable_type="journey_map", 
+            deliverable_type="journey_map",
             parameters=request.model_dump(exclude={"project_id", "conversation_id"}),
         )
 
         agent_result = await agent_runner.run(
-            task_type="journey_map", 
+            task_type="journey_map",
             query=json.dumps(request.model_dump()),
             project_id=project_id,
             conversation_id=request.conversation_id,  # Pass conversation_id
@@ -1063,7 +1063,7 @@ async def generate_journey_map(
                 "original_request": request.model_dump(),
             },
         )
-        
+
         processing_time = time.time() - start_time
         return DeliverableResponse(
             content=final_content,
@@ -1401,9 +1401,9 @@ async def list_projects(
         ):  # Handle if function returns (list, count) tuple
             projects_data, total_count = projects_result
         else:  # Handle if function returns just the list
-            projects_data = projects_result 
+            projects_data = projects_result
             total_count = len(projects_data) if projects_data else 0
-            
+
         return ProjectsResponse(
             projects=[Project(**p) for p in projects_data], count=total_count
         )
@@ -2007,7 +2007,7 @@ async def admin_delete_user(
 
         if not success:
             # Deletion might fail if user not found
-                raise HTTPException(
+            raise HTTPException(
                 status_code=404,
                 detail=f"User {user_id} not found or could not be deleted.",
             )
@@ -2344,7 +2344,7 @@ async def save_refined_message(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Invalid message index. Must be between 0 and {len(messages) - 1}.",
             )
-        
+
         # O3 Fix: Find nearest user message before the target assistant message
         # --- Corrected try/except structure ---
         user_message = None
@@ -2360,7 +2360,7 @@ async def save_refined_message(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Message index does not point to an assistant message.",
                 )
-            
+
             # Search backwards from the assistant message index for the nearest user message
             user_message = next(
                 (
@@ -2370,14 +2370,14 @@ async def save_refined_message(
                 ),
                 None,  # Default to None if no preceding user message is found
             )
-            
+
             if user_message is None:
                 logger.warning(
                     f"Could not find preceding user message for index {message_index} in chat {chat_id}. Cannot save pair."
                 )
                 # Correct indentation
                 raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST, 
+                    status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Could not find corresponding user message for refinement.",
                 )
 
@@ -2460,7 +2460,7 @@ async def create_new_chat_for_project(
         # Ensure create_chat is called with user_id now
         chat_info = await chat_service.create_chat(
             user_id=current_user["id"],  # Pass user_id
-            project_id=project_id, 
+            project_id=project_id,
             chat_name=chat_name,
         )
 
