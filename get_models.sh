@@ -28,14 +28,14 @@ echo "⬇️ Downloading models (this may take a while)..."
 # Format: gdown "https://drive.google.com/uc?id=FILE_ID" -O filename
 
 # Gemma 2B (1.5GB) - Fast model for testing
-gdown "1your_file_id_here" -O models/gemma-2b-it.Q4_K_M.gguf
+gdown "1your_model_file_id_here" -O models/gemma-2b-it.Q4_K_M.gguf
 
 # Gemma 7B (5GB) - Balanced model
-# gdown "1your_file_id_here" -O models/gemma-7b-it.Q4_K_M.gguf
+# gdown "1your_larger_model_id_here" -O models/gemma-7b-it.Q4_K_M.gguf
 
-# Vector store
+# Vector store (116MB compressed)
 echo "⬇️ Downloading vector store..."
-gdown "1your_vectorstore_id_here" -O vectorstore.zip
+gdown "1your_vectorstore_file_id_here" -O vectorstore.zip
 unzip -q vectorstore.zip -d app/data/
 rm vectorstore.zip
 

@@ -58,7 +58,7 @@ import {
 
   // **Globals & helpers** ----------------------------------------
   const API_BASE_URL =
-    process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/+$/, "") || "/api";
+    process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") || "http://localhost:8000";
 
   const VERY_LONG_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes for RAG/Agent calls
 

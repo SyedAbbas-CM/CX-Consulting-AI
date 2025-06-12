@@ -545,17 +545,17 @@ class AgentRunner:
 
         pipeline_results = {}
         actual_query_for_retrieval = query
-
+        
         # If task_type is document generation, the query might be structured parameters.
         # The retriever might need a more natural language query derived from these.
-        # For now, we pass the raw query string to retriever.
+        # For now, we pass the raw query string to retriever. 
         # If doc_config is present, it's passed to retriever for collection scoping.
 
         # 1. Retrieve Context
         logger.debug("Agent Pipeline Step 1: Retrieval")
         retrieved_context = await self.retriever_agent.retrieve(
-            query=actual_query_for_retrieval,
-            project_id=project_id,
+            query=actual_query_for_retrieval, 
+            project_id=project_id, 
             doc_config=doc_config,  # Pass doc_config here
         )
         pipeline_results["retrieved_context"] = retrieved_context
@@ -566,7 +566,7 @@ class AgentRunner:
             # Decide fallback behavior - maybe skip drafting/critique? Or try LLM directly?
             # For now, we proceed but Drafting agent should handle no context
         else:
-            logger.info(f"Retrieved {len(retrieved_context)} context chunks.")
+             logger.info(f"Retrieved {len(retrieved_context)} context chunks.")
 
         # 2. Get Chat History (Optional)
         chat_history = None
@@ -591,7 +591,7 @@ class AgentRunner:
             logger.info(
                 "No conversation_id or project_id provided. Chat history not fetched."
             )
-
+        
         # 3. Generate Drafts
         logger.debug("Agent Pipeline Step 2: Drafting")
         drafts = await self.drafting_agent.generate_drafts(
@@ -602,11 +602,11 @@ class AgentRunner:
         )
         pipeline_results["drafts"] = drafts
         if not drafts:
-            logger.error("Drafting agent failed to generate drafts.")
-            # Handle failure - maybe return an error or try a simpler response?
+             logger.error("Drafting agent failed to generate drafts.")
+             # Handle failure - maybe return an error or try a simpler response?
             return {"error": "Failed to generate response drafts."}
         else:
-            logger.info(f"Generated {len(drafts)} drafts.")
+             logger.info(f"Generated {len(drafts)} drafts.")
 
         # 4. Critique Drafts
         logger.debug("Agent Pipeline Step 3: Critiquing")
@@ -629,13 +629,13 @@ class AgentRunner:
                 f"Best draft index {best_draft_index} out of range. Using index 0."
             )
             best_draft_index = 0  # Default to first draft if index is invalid
-
+        
         best_draft = drafts[best_draft_index]
         final_answer, sources = await self.finalizer_agent.finalize_answer(
-            query=query,
-            best_draft=best_draft,
-            critiques=critiques,
-            retrieved_context=retrieved_context,
+             query=query,
+             best_draft=best_draft,
+             critiques=critiques,
+             retrieved_context=retrieved_context,
             chat_history=chat_history,
         )
         pipeline_results["final_answer"] = final_answer
@@ -643,4 +643,4 @@ class AgentRunner:
         logger.info("Finalizing step completed.")
 
         logger.info(f"AgentRunner finished task '{task_type}'.")
-        return pipeline_results
+        return pipeline_results 
