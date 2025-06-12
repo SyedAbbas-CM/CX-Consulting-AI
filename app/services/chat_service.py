@@ -27,14 +27,18 @@ class ChatService:
     # ---------- construction & helpers --------------------------------------------------
 
     def __init__(
-        self, redis_url: str = "redis://localhost:6379/0", max_history_length: int = 100
+        self,
+        redis_url: str = "redis://localhost:6379/0",
+        max_history_length: int = 1000,
     ):
         try:
             self.redis_client = redis.from_url(redis_url, decode_responses=True)
             self.max_history_length = max_history_length
-            logger.info(
-                f"ChatService initialized with Redis @ {redis_url} (async client) and max history length {self.max_history_length}"
-            )
+            # PRODUCTION OPTIMIZED: Reduce logging noise
+            if logger.isEnabledFor(logging.INFO):
+                logger.info(
+                    f"ChatService initialized with Redis @ {redis_url} (async client) and max history length {self.max_history_length}"
+                )
         except Exception as e:
             logger.error(
                 f"An unexpected error occurred during ChatService Redis initialization: {e}",
@@ -52,7 +56,7 @@ class ChatService:
     def _project_set_key(self, project_id: str) -> str:
         return f"project:{project_id}:chats"
 
-    # ---------- public API (now async) --------------------------------------------------
+    # ---------- main API methods -------------------------------------------------------
 
     async def create_chat(
         self,
@@ -62,15 +66,15 @@ class ChatService:
     ) -> Dict[str, Any]:
         chat_id = str(uuid.uuid4())
         now_iso = datetime.now(timezone.utc).isoformat()
-        chat_name = (
-            chat_name or f"Chat {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M')}"
-        )
+
+        if not chat_name:
+            chat_name = f"Chat {chat_id[:8]}"
 
         metadata = {
             "chat_id": chat_id,
-            "project_id": project_id,
-            "user_id": user_id,
             "name": chat_name,
+            "project_id": project_id or "",
+            "user_id": user_id,
             "created_at": now_iso,
             "last_updated": now_iso,
         }
@@ -78,25 +82,30 @@ class ChatService:
         try:
             async with self.redis_client.pipeline(transaction=True) as pipe:
                 meta_key = self._meta_key(chat_id)
-                msg_key = self._msg_key(chat_id)
-
                 pipe.hset(meta_key, mapping=metadata)
+                pipe.expire(meta_key, CHAT_TTL_SECONDS)
+
+                msg_key = self._msg_key(chat_id)
+                pipe.expire(msg_key, CHAT_TTL_SECONDS)
+
                 if project_id:
                     project_key = self._project_set_key(project_id)
                     pipe.sadd(project_key, chat_id)
                     pipe.expire(project_key, CHAT_TTL_SECONDS)
 
-                pipe.expire(meta_key, CHAT_TTL_SECONDS)
-                pipe.expire(msg_key, CHAT_TTL_SECONDS)
-
                 await pipe.execute()
 
-            logger.info(
-                f"Created chat '{chat_id}' (User: {user_id}, Project: {project_id or 'None'}) with TTL {CHAT_TTL_SECONDS} sec",
-            )
+            # PRODUCTION OPTIMIZED: Only log in debug mode
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(
+                    f"Created chat {chat_id} for user {user_id} in project {project_id}"
+                )
+
             return metadata
         except Exception as e:
-            logger.exception("Redis error creating chat: %s", e)
+            logger.error(
+                f"Failed to create chat for user {user_id}: {e}", exc_info=True
+            )
             raise
 
     async def list_chats_for_project(
@@ -119,9 +128,11 @@ class ChatService:
 
         for cid, meta in zip(paginated, metas):
             if not meta:
-                logger.warning(
-                    "Missing metadata for chat %s in project %s", cid, project_id
-                )
+                # PRODUCTION OPTIMIZED: Only log warnings in debug mode
+                if logger.isEnabledFor(logging.DEBUG):
+                    logger.warning(
+                        "Missing metadata for chat %s in project %s", cid, project_id
+                    )
                 continue
             # Ensure essential fields are present, providing defaults if reasonable
             summary = {
@@ -154,9 +165,12 @@ class ChatService:
             results = await pipe.execute()
 
         if not results[0]:  # results[0] is the output of pipe.exists(meta_key)
-            logger.warning(
-                "Request for history of non-existent chat %s (or TTL expired)", chat_id
-            )
+            # PRODUCTION OPTIMIZED: Only log warnings in debug mode
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.warning(
+                    "Request for history of non-existent chat %s (or TTL expired)",
+                    chat_id,
+                )
             return []
 
         # Fetch project_id from metadata to refresh project set TTL if possible
@@ -174,7 +188,9 @@ class ChatService:
             try:
                 messages.append(json.loads(raw))
             except Exception:
-                logger.exception("Corrupt message in chat %s: %s", chat_id, raw)
+                # PRODUCTION OPTIMIZED: Only log exceptions in debug mode
+                if logger.isEnabledFor(logging.DEBUG):
+                    logger.exception("Corrupt message in chat %s: %s", chat_id, raw)
         return messages
 
     async def add_message_to_chat(

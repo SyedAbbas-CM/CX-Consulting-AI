@@ -22,6 +22,12 @@ class Settings(BaseSettings):
     DEBUG: bool = Field(default=False, env="DEBUG")
     LOG_LEVEL: str = Field(default="INFO", env="LOG_LEVEL")
 
+    # Production optimization settings
+    PRODUCTION_MODE: bool = Field(default=False, env="PRODUCTION_MODE")
+    DISABLE_REQUEST_LOGGING: bool = Field(default=False, env="DISABLE_REQUEST_LOGGING")
+    DISABLE_AUTH_LOGGING: bool = Field(default=False, env="DISABLE_AUTH_LOGGING")
+    DISABLE_FILE_LOGGING: bool = Field(default=False, env="DISABLE_FILE_LOGGING")
+
     # Deployment mode
     DEPLOYMENT_MODE: str = os.getenv("DEPLOYMENT_MODE", "local")  # local or azure
 
@@ -125,7 +131,8 @@ class Settings(BaseSettings):
     # Memory settings
     MAX_MEMORY_ITEMS: int = 10
     TEMPERATURE: float = 0.1
-    CHAT_MAX_HISTORY_LENGTH: int = 100
+    # PRODUCTION OPTIMIZED: Increased chat history for long conversations
+    CHAT_MAX_HISTORY_LENGTH: int = Field(default=1000, env="CHAT_MAX_HISTORY_LENGTH")
 
     # Project settings
     PROJECT_STORAGE_TYPE: str = "file"
@@ -173,6 +180,16 @@ class Settings(BaseSettings):
     def using_azure_openai(self) -> bool:
         """Check if we're using Azure OpenAI."""
         return self.LLM_BACKEND == "azure"
+
+    def is_production(self) -> bool:
+        """Check if we're in production mode."""
+        return self.PRODUCTION_MODE or self.DEPLOYMENT_MODE == "azure"
+
+    def get_log_level(self) -> str:
+        """Get appropriate log level based on mode."""
+        if self.is_production():
+            return "WARNING"  # Only warnings and errors in production
+        return self.LOG_LEVEL
 
 
 # @lru_cache(maxsize=1)  # Removing cache to ensure fresh settings
