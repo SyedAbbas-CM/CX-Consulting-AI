@@ -1,69 +1,52 @@
-# CX Consulting AI - Setup Instructions for Tariq
+# CX Consulting AI - Setup for Tariq
 
-## 🎯 Quick Setup Guide
+## 🎯 Super Simple Setup (3 steps)
 
-### Step 1: Get the Project
+### Step 1: Get the Code
 ```bash
 git clone https://github.com/Cloud-Primero/CX-Consulting-AI.git
 cd CX-Consulting-AI
 ```
 
-### Step 2: Get the Shared Assets
-**Contact Arham for the shared assets package** (32GB with all models and data)
-
-Options:
-- Google Drive link
-- Direct file transfer
-- Cloud storage download
-
-### Step 3: Run the Automated Setup
+### Step 2: Download Models & Setup Everything
 ```bash
-# Extract the shared assets package to the project directory
-# You should have a folder like: shared_assets_YYYYMMDD_HHMMSS
-
-# Run the setup script
-chmod +x setup_shared_assets.sh
-./setup_shared_assets.sh
+./get_models.sh
 ```
+That's it! This script:
+- Downloads all models from Google Drive
+- Sets up the vector store
+- Creates virtual environment
+- Installs all dependencies
+- Configures everything
 
-### Step 4: Start the Application
+### Step 3: Start the App
 ```bash
-# Activate the environment
 source venv/bin/activate
-
-# Start the backend
 python start.py
 ```
 
-### Step 5: Access the Application
-Open your browser to: http://localhost:8000
-
-## 🔐 Login Credentials
+## 🌐 Access the App
+- **URL**: http://localhost:8000
 - **Username**: azureuser
 - **Password**: demo123456
 
-## 📦 What's Included
-- **6 LLM Models** (2B to 27B parameters)
-- **Vector Store** (pre-embedded documents)
-- **Test Data** (sample projects and conversations)
-- **Full Documentation**
+## 📦 What You Get
+- **6 AI Models** (2B to 27B parameters)
+- **Vector Store** (pre-loaded documents)
+- **Ready-to-use setup**
 
-## 💻 System Requirements
-- **RAM**: 8GB minimum (16GB+ recommended)
-- **Storage**: 40GB free space
-- **Python**: 3.8+
-- **OS**: macOS, Linux, or Windows with WSL
+## 💻 Requirements
+- **Python 3.8+**
+- **8GB RAM minimum**
+- **30GB free space**
+- **Internet connection** (for download)
 
-## 🚨 Troubleshooting
-1. **Out of memory**: Use smaller model (Gemma 2B)
-2. **Dependencies issues**: Run `pip install -r requirements.txt`
-3. **Port conflict**: Change PORT in .env file
+## 🚨 If Something Goes Wrong
+1. Make sure you have Python 3.8+: `python3 --version`
+2. Make sure you have internet connection
+3. Check if you have enough disk space: `df -h`
 
-## 🆘 Need Help?
-- Check app.log for errors
-- Review SHARING_GUIDE.md for detailed instructions
-- Contact the development team
+That's it! No complicated setup, no manual file copying, just run one script and you're done.
 
 ---
-**Created**: June 2025
-**Version**: Production v1.0
+**Contact**: Message if you need the Google Drive links updated in the script
