@@ -16,25 +16,42 @@ from starlette.middleware.base import BaseHTTPMiddleware
 # Prometheus integration
 from starlette_prometheus import PrometheusMiddleware, metrics
 
+# Load environment variables first
+load_dotenv()
+
+# Import settings early to configure logging properly
+from app.core.config import Settings, get_settings
+
+settings = get_settings()
+
 # Silence noisy libraries BEFORE configuring project logger
 logging.getLogger("pdfminer").setLevel(logging.ERROR)
 logging.getLogger("h5py").setLevel(logging.ERROR)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
-# Configure logging
+# PRODUCTION OPTIMIZED: Configure logging based on production mode
+log_level = getattr(logging, settings.get_log_level())
+handlers = [logging.StreamHandler(sys.stdout)]
+
+# Only add file logging if not disabled in production
+if not settings.DISABLE_FILE_LOGGING:
+    handlers.append(logging.FileHandler("app.log"))
+
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=log_level,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[logging.StreamHandler(sys.stdout), logging.FileHandler("app.log")],
+    handlers=handlers,
 )
 logger = logging.getLogger("cx_consulting_ai")
 
-# Set specific log levels for noisy libraries if needed
-logging.getLogger("urllib3").setLevel(logging.WARNING)
-logging.getLogger("httpx").setLevel(logging.WARNING)
-logging.getLogger("llama_cpp").setLevel(logging.INFO)  # Keep llama_cpp info for now
-
-# Load environment variables
-load_dotenv()
+# Set specific log levels for noisy libraries
+if settings.is_production():
+    logging.getLogger("llama_cpp").setLevel(
+        logging.WARNING
+    )  # Reduce llama_cpp noise in production
+else:
+    logging.getLogger("llama_cpp").setLevel(logging.INFO)  # Keep llama_cpp info for dev
 
 import redis  # For redis.exceptions
 import redis.asyncio as aredis  # Renamed to aredis to avoid conflict with top-level redis import
@@ -58,7 +75,6 @@ from app.api.routes import router as api_router
 from app.api.routes_upload import router as upload_router
 
 # Import application components
-from app.core.config import Settings, get_settings
 from app.core.error_handling import ApplicationError, global_exception_handler
 
 # Import service components
@@ -82,18 +98,25 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# Add Prometheus middleware
-app.add_middleware(PrometheusMiddleware)
-# Add metrics endpoint
-app.add_route("/metrics", metrics)
+# PRODUCTION OPTIMIZED: Only add Prometheus middleware if not in production or explicitly enabled
+if (
+    not settings.is_production()
+    or os.getenv("ENABLE_METRICS", "false").lower() == "true"
+):
+    app.add_middleware(PrometheusMiddleware)
+    app.add_route("/metrics", metrics)
 
-# Add custom Logging middleware (ensure order is considered)
-app.add_middleware(LoggingMiddleware)
-app.add_middleware(AuthLoggingMiddleware)
+# PRODUCTION OPTIMIZED: Conditionally add logging middleware
+if not settings.DISABLE_REQUEST_LOGGING:
+    app.add_middleware(LoggingMiddleware)
+
+if not settings.DISABLE_AUTH_LOGGING:
+    app.add_middleware(AuthLoggingMiddleware)
 
 # Configure CORS
 if os.getenv("ENABLE_CORS", "true").lower() in ("true", "1", "t"):
-    origins = os.getenv("ALLOWED_ORIGINS", "*").split(",")
+    # Temporarily allow all origins for development
+    origins = ["*"]
     app.add_middleware(
         CORSMiddleware,
         allow_origins=origins,
@@ -101,7 +124,8 @@ if os.getenv("ENABLE_CORS", "true").lower() in ("true", "1", "t"):
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    logger.info(f"CORS enabled with origins: {origins}")
+    if not settings.is_production():  # Only log CORS in dev
+        logger.info(f"CORS enabled with origins: {origins}")
 
 
 # Register global exception handler
@@ -109,7 +133,8 @@ if os.getenv("ENABLE_CORS", "true").lower() in ("true", "1", "t"):
 async def exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Global exception handler for all unhandled exceptions."""
     logger.error(f"Unhandled exception: {str(exc)}")
-    traceback.print_exc()
+    if not settings.is_production():  # Only print stack trace in dev
+        traceback.print_exc()
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={"detail": f"Internal server error: {str(exc)}"},
@@ -125,12 +150,17 @@ app.include_router(auth_router, prefix="/api/auth")
 # Include Upload router
 app.include_router(upload_router, prefix="/api", tags=["Document Upload"])
 
+from app.api.company_profiles import router as company_profiles_router
+
 # Include Deliverables router
 from app.api.deliverables import router as deliverables_router
 
 app.include_router(
     deliverables_router, prefix="/api/deliverables", tags=["Deliverables"]
 )
+
+# Include Company Profiles alias
+app.include_router(company_profiles_router, prefix="/api")
 
 
 # Define root endpoint

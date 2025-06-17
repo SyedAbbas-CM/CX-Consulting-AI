@@ -9,6 +9,8 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  output: 'export',
+  trailingSlash: true,
   // Removed rewrites as proxying is now handled by src/pages/api/[...proxy].ts
   // async rewrites() {
   //   return [

@@ -5,8 +5,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Body, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from app.services.document_service import DocumentService
-from app.services.memory_manager import MemoryManager
+from app.api.dependencies import get_chat_service, get_document_service
 from app.services.project_handler import ProjectHandler
 
 router = APIRouter(
@@ -16,13 +15,13 @@ router = APIRouter(
 )
 
 
-# Dependency to get project handler
-def get_project_handler():
-    memory_manager = MemoryManager()
-    document_service = DocumentService()
-    return ProjectHandler(
-        memory_manager=memory_manager, document_service=document_service
-    )
+# Dependency to get project handler leveraging singleton services on app.state
+# We resolve ChatService and DocumentService via existing dependency providers.
+def get_project_handler(
+    chat_service=Depends(get_chat_service),
+    document_service=Depends(get_document_service),
+):
+    return ProjectHandler(chat_service=chat_service, document_service=document_service)
 
 
 # Models

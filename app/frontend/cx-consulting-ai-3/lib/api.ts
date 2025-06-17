@@ -2,10 +2,8 @@
  * API client for communicating with the CX Consulting AI backend
  */
 
-// Use environment variable if available, otherwise default to localhost
-const API_BASE_URL = typeof window !== 'undefined' && process?.env?.NEXT_PUBLIC_API_URL
-  ? process.env.NEXT_PUBLIC_API_URL
-  : 'http://localhost:8000';
+// Use environment variable if available, otherwise default to localhost for development
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 // Types
 export interface SearchResult {
@@ -274,7 +272,7 @@ export async function generateJourneyMap(
 }
 
 /**
- * Get all conversations
+ * Get conversation history
  */
 export async function getConversations(): Promise<ConversationsResponse> {
   const response = await fetch(`${API_BASE_URL}/api/conversations`, {
@@ -306,7 +304,7 @@ export async function deleteConversation(conversationId: string): Promise<void> 
 }
 
 /**
- * Check API health
+ * Health check
  */
 export async function checkHealth(): Promise<{ status: string; model: string; version: string }> {
   const response = await fetch(`${API_BASE_URL}/api/health`, {
@@ -314,8 +312,7 @@ export async function checkHealth(): Promise<{ status: string; model: string; ve
   });
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ detail: 'Failed to check health' }));
-    throw new Error(errorData.detail || 'Failed to check health');
+    throw new Error('Health check failed');
   }
 
   return response.json();

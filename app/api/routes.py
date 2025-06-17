@@ -12,7 +12,7 @@ import uuid  # Added for P3 task_id
 from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import SpooledTemporaryFile  # Added
-from typing import Any, Dict, List, Optional
+from typing import Annotated, Any, Dict, List, Optional
 
 from fastapi import BackgroundTasks  # Re-add BackgroundTasks
 from fastapi import Request  # <-- Add Request here
@@ -87,6 +87,7 @@ from app.core.query_router import (  # Added QueryIntent
     QueryIntent,
     classify_query_intent,
 )
+from app.schemas.azure_settings import AzureOpenAIConfigRequest
 from app.schemas.chat import (
     ChatCreateRequest,
     ChatCreateResponse,
@@ -96,9 +97,11 @@ from app.schemas.chat import (
     ChatSummaryResponse,
     RefinementResponse,
 )
+from app.schemas.llm_backend import LlmBackendUpdateRequest
 
 # Import schemas from their new locations
 from app.schemas.model import LlmConfigResponse, ModelActionRequest
+from app.schemas.vector_db import VectorDbActionRequest
 from app.scripts.model_manager import (
     MODELS_DIR,
     check_current_model,
@@ -107,12 +110,20 @@ from app.scripts.model_manager import (
     get_model_status,
     update_env_config,
 )
+
+# Vector DB management helpers and schemas
+from app.scripts.vector_db_manager import (
+    download_vector_db,
+    get_available_vector_dbs,
+    get_vector_db_status,
+)
 from app.services import auth_service
 from app.services.chat_service import ChatService
 from app.services.document_service import DocumentService
 from app.services.ingest_worker import ingest_job  # Added
 from app.services.project_manager import ProjectManager
 from app.services.rag_engine import RagEngine
+from app.utils.env_manager import update_env_vars
 from app.utils.job_tracker import job_tracker  # Added
 
 # Import from model_manager script
@@ -155,6 +166,9 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/token")
 
 # --- Global LLMService, ChatService instances and their getters were removed here ---
 # --- They should be accessed via app.state through FastAPI dependencies ---
+
+# Alias dependency for admin-authenticated user
+AdminUserDep = Annotated[dict, Depends(admin_required)]
 
 
 @router.post(
@@ -1233,14 +1247,78 @@ async def health_check(
     if redis_status == "unhealthy":
         overall_status = "unhealthy"
 
-    # Check LLM Service (simple generation test)
+    # Check LLM Service status (without generation test to avoid timeouts)
+    llm_status = "healthy" if llm_service else "unhealthy"
+    llm_details = (
+        "LLM service available" if llm_service else "LLM service not initialized"
+    )
+
+    health_status["checks"].append(
+        {
+            "service": "llm_service",
+            "status": llm_status,
+            "details": llm_details,
+            "backend": getattr(llm_service, "backend", "unknown"),
+            "model_id": getattr(llm_service, "model_id", "unknown"),
+        }
+    )
+
+    health_status["status"] = overall_status
+    health_status["check_duration_ms"] = (time.time() - start_time) * 1000
+
+    if overall_status == "unhealthy":
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=health_status
+        )
+
+    return health_status
+
+
+# Add a detailed health endpoint for LLM testing
+@router.get("/health/detailed", tags=["Health"], response_model=Dict[str, Any])
+async def detailed_health_check(
+    chat_service: ChatServiceDep,
+    llm_service: LLMServiceDep,
+):
+    """Detailed health check that includes LLM generation test (slower)."""
+    import time
+
+    start_time = time.time()
+    health_status: Dict[str, Any] = {
+        "status": "healthy",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "checks": [],
+    }
+    overall_status = "healthy"
+
+    # Check Redis via ChatService
+    redis_status = "unhealthy"
+    redis_details = "Connection failed or ping timeout"
+    try:
+        if await chat_service.redis_client.ping():
+            redis_status = "healthy"
+            redis_details = "Connected and responsive"
+    except Exception as e:
+        logger.error(f"Health check: Redis ping failed: {e}")
+        redis_details = f"Connection failed: {e}"
+
+    health_status["checks"].append(
+        {
+            "service": "redis (via ChatService)",
+            "status": redis_status,
+            "details": redis_details,
+        }
+    )
+    if redis_status == "unhealthy":
+        overall_status = "unhealthy"
+
+    # Check LLM Service (with generation test)
     llm_status = "unhealthy"
     llm_details = "LLM generation failed or timed out"
     try:
         # Simple test prompt
         test_prompt = "Health check prompt: respond OK."
         # Use a short timeout for the health check
-        # Use injected llm_service
         response = await asyncio.wait_for(
             llm_service.generate(prompt=test_prompt, max_tokens=5), timeout=10.0
         )
@@ -1262,17 +1340,12 @@ async def health_check(
             "service": "llm_service",
             "status": llm_status,
             "details": llm_details,
-            # Use injected llm_service
             "backend": llm_service.backend,
             "model_id": llm_service.model_id,
         }
     )
     if llm_status == "unhealthy":
-        # Degraded might be more appropriate than unhealthy if LLM is down
         overall_status = "degraded" if overall_status == "healthy" else overall_status
-
-    # TODO: Add checks for DocumentService (e.g., DB connection, embedding model status)
-    # TODO: Add checks for ProjectManager (e.g., storage access)
 
     health_status["status"] = overall_status
     health_status["check_duration_ms"] = (time.time() - start_time) * 1000
@@ -1888,10 +1961,9 @@ async def associate_conversation_with_project(
 
 
 @router.get("/admin/users")
-@admin_required
 async def list_users(
     # Dependencies first
-    current_user: CurrentUserDep,
+    current_user: AdminUserDep,
     # Optional Query params
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
@@ -1909,8 +1981,7 @@ async def list_users(
 
 
 @router.put("/admin/users/{user_id}")
-@admin_required
-async def admin_update_user(user_id: str, updates: dict, current_user: CurrentUserDep):
+async def admin_update_user(user_id: str, updates: dict, current_user: AdminUserDep):
     """Update a user (admin only)."""
     try:
         from app.services.auth_service import AuthService
@@ -1933,9 +2004,8 @@ async def admin_update_user(user_id: str, updates: dict, current_user: CurrentUs
 
 
 @router.delete("/admin/users/{user_id}")
-@admin_required
 async def admin_delete_user(
-    user_id: str, current_user: CurrentUserDep  # Required Path param  # Dependency
+    user_id: str, current_user: AdminUserDep  # Required Path param
 ):
     """Delete a user (admin only)."""
     try:
@@ -2022,7 +2092,7 @@ async def get_improvement_interactions(
 
 
 @router.get("/models", tags=["Models"])
-async def list_available_models(current_user: CurrentUserDep):
+async def list_available_models(current_user: AdminUserDep):
     """Lists available models and their download status."""
     models_status_list = []
     # Use the imported function that handles potential import errors
@@ -2076,7 +2146,9 @@ async def list_available_models(current_user: CurrentUserDep):
 
 @router.post("/models/download", tags=["Models"])
 async def download_model_route(
-    request: ModelActionRequest, background_tasks: BackgroundTasks
+    request: ModelActionRequest,
+    background_tasks: BackgroundTasks,
+    current_user: AdminUserDep,
 ):
     """Triggers a model download in the background."""
     model_id = request.model_id
@@ -2112,6 +2184,7 @@ async def download_model_route(
 async def set_active_model_route(
     request: ModelActionRequest,
     current_llm_service: LLMServiceDep,
+    current_user: AdminUserDep,
 ):
     """Sets the specified model as active by reloading the LLM service with the model path."""
     model_id = request.model_id
@@ -2143,12 +2216,29 @@ async def set_active_model_route(
         # --- Reload the LLM service with the specific model path ---
         try:
             logger.info(
-                f"Attempting to reload LLMService with specific model path: {model_path_to_load}..."
+                "Attempting to reload LLMService with specific model path: %s…",
+                model_path_to_load,
             )
+
+            # Persist the choice to .env so future restarts load the same model automatically
+            env_saved = update_env_vars(
+                {
+                    "MODEL_ID": model_id,
+                    "MODEL_PATH": model_path_to_load,
+                }
+            )
+            if not env_saved:
+                logger.warning(
+                    "Failed to update .env with new MODEL_ID/PATH; backend will work in-memory but won't survive restart."
+                )
+
             current_llm_service.reload_model(model_path=model_path_to_load)
-            logger.info("LLMService reloaded successfully.")
+            logger.info("LLMService reloaded successfully with model %s", model_id)
+
             return {
-                "message": f"Model '{model_id}' set as active and LLM service reloaded."
+                "message": f"Model '{model_id}' set as active and LLM service reloaded.",
+                "model_id": model_id,
+                "persisted": env_saved,
             }
         except Exception as reload_e:
             logger.error(
@@ -2403,6 +2493,7 @@ async def create_new_chat_for_project(
             user_id=current_user["id"],  # Pass user_id
             project_id=project_id,
             chat_name=chat_name,
+            journey_type=chat_data.journey_type if chat_data else None,
         )
 
         if not chat_info or "chat_id" not in chat_info:
@@ -2684,3 +2775,164 @@ async def refine_document_route(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An unexpected error occurred while refining the document: {str(e)}",
         )
+
+
+# -----------------------------------------------------------------------------
+# Vector DB Management (Admin-only)
+# -----------------------------------------------------------------------------
+
+
+@router.get("/vector-db", tags=["Vector DB"])
+async def list_vector_dbs(current_user: AdminUserDep):
+    """Return vector DB bundles with status. Keys match frontend expectations."""
+    bundles = []
+    active_db_id: Optional[str] = None
+
+    for db_id, info in get_available_vector_dbs().items():
+        status_info = get_vector_db_status(db_id)
+        if status_info.get("status") == "active":
+            active_db_id = db_id
+
+        bundles.append(
+            {
+                "id": db_id,
+                "filename": info.get("filename"),
+                "description": info.get("description"),
+                "size_gb": info.get("size_gb"),
+                "status": status_info.get("status"),
+                "message": status_info.get("message", ""),
+            }
+        )
+
+    return {"available_vector_dbs": bundles, "active_db_id": active_db_id}
+
+
+@router.post("/vector-db/download", tags=["Vector DB"])
+async def download_vector_db_route(
+    request: VectorDbActionRequest,
+    background_tasks: BackgroundTasks,
+    current_user: AdminUserDep,
+):
+    db_id = request.db_id
+    force = request.force_download
+
+    status = get_vector_db_status(db_id)
+    if status.get("status") == "active" and not force:
+        return {"message": f"Vector DB '{db_id}' already active."}
+
+    background_tasks.add_task(download_vector_db, db_id, force)
+    return {"message": f"Download started for vector DB '{db_id}'."}
+
+
+# -----------------------------------------------------------------------------
+# LLM Runtime Status Endpoint
+# -----------------------------------------------------------------------------
+
+
+@router.get("/llm/status", tags=["Models"])
+async def llm_runtime_status(llm_service: LLMServiceDep):
+    """Return whether an LLM is actually loaded in memory and any last load error."""
+    return llm_service.get_status()
+
+
+# -----------------------------------------------------------------------------
+# LLM Backend Switch (Admin-only)
+# -----------------------------------------------------------------------------
+
+
+@router.post(
+    "/config/llm/backend",
+    tags=["Admin & Config"],
+    summary="Switch the active LLM backend (admin-only)",
+)
+async def set_llm_backend_route(
+    request: LlmBackendUpdateRequest,
+    llm_service: LLMServiceDep,
+    current_user: AdminUserDep,
+):
+    """Update LLM_BACKEND (and optionally MODEL_ID/MODEL_PATH) in .env and reload the singleton service."""
+
+    backend_lower = request.backend.lower()
+    allowed = {"llama.cpp", "azure", "ollama"}
+    if backend_lower not in allowed:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported backend '{request.backend}'. Allowed: {', '.join(allowed)}",
+        )
+
+    updates: dict[str, str] = {"LLM_BACKEND": backend_lower}
+    if request.model_id:
+        updates["MODEL_ID"] = request.model_id
+    if request.model_path:
+        updates["MODEL_PATH"] = request.model_path
+
+    ok = update_env_vars(updates)
+    if not ok:
+        raise HTTPException(status_code=500, detail="Failed to update .env file")
+
+    # Reload the singleton service
+    try:
+        await asyncio.to_thread(llm_service.reload_from_env)
+    except Exception as e:
+        logger.error(
+            "Failed to reload LLMService after backend switch: %s", e, exc_info=True
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=".env updated but model reload failed; check server logs.",
+        )
+
+    return {
+        "message": f"LLM backend switched to '{backend_lower}'.",
+        "backend": backend_lower,
+    }
+
+
+# -----------------------------------------------------------------------------
+# Azure OpenAI credentials (Admin-only)
+# -----------------------------------------------------------------------------
+
+
+@router.post(
+    "/config/llm/azure",
+    tags=["Admin & Config"],
+    summary="Set Azure OpenAI credentials & deployment (admin-only)",
+)
+async def set_azure_openai_config_route(
+    request: AzureOpenAIConfigRequest,
+    llm_service: LLMServiceDep,
+    current_user: AdminUserDep,
+):
+    updates = {
+        "AZURE_OPENAI_ENDPOINT": request.endpoint,
+        "AZURE_OPENAI_KEY": request.api_key,
+        "AZURE_OPENAI_DEPLOYMENT": request.deployment,
+    }
+    if request.api_version:
+        updates["AZURE_OPENAI_API_VERSION"] = request.api_version
+
+    ok = update_env_vars(updates)
+    if not ok:
+        raise HTTPException(
+            status_code=500, detail="Failed to update .env file with Azure settings"
+        )
+
+    # If backend already set to azure, reload to pick up new creds
+    if llm_service.backend == "azure":
+        try:
+            await asyncio.to_thread(llm_service.reload_from_env)
+        except Exception as e:
+            logger.error(
+                "Failed to reload LLMService after Azure config update: %s",
+                e,
+                exc_info=True,
+            )
+            raise HTTPException(
+                status_code=500,
+                detail="Azure vars saved but model reload failed; check server logs.",
+            )
+
+    return {
+        "message": "Azure OpenAI configuration saved.",
+        "backend": "azure",
+    }

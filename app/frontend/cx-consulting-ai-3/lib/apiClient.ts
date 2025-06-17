@@ -58,7 +58,7 @@ import {
 
   // **Globals & helpers** ----------------------------------------
   const API_BASE_URL =
-    process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/+$/, "") || "/api";
+    process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") || "http://localhost:8000";
 
   const VERY_LONG_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes for RAG/Agent calls
 
@@ -129,7 +129,7 @@ import {
     offset = 0,
   ): Promise<ProjectsResponse> {
     const r = await fetchWithAuth(
-      `${API_BASE_URL}/projects?limit=${limit}&offset=${offset}`,
+      `${API_BASE_URL}/api/projects?limit=${limit}&offset=${offset}`,
     );
     return (await handleResponse<ProjectsResponse>(r)) ?? {
       projects: [],
@@ -140,7 +140,7 @@ import {
   export async function createProject(
     payload: ProjectCreateRequest,
   ): Promise<Project> {
-    const r = await fetchWithAuth(`${API_BASE_URL}/projects`, {
+    const r = await fetchWithAuth(`${API_BASE_URL}/api/projects`, {
       method: "POST",
       body: JSON.stringify(payload),
     });
@@ -148,7 +148,7 @@ import {
   }
 
   export async function deleteProject(projectId: string): Promise<void> {
-    await fetchWithAuth(`${API_BASE_URL}/projects/${projectId}`, {
+    await fetchWithAuth(`${API_BASE_URL}/api/projects/${projectId}`, {
       method: "DELETE",
     });
   }
@@ -160,7 +160,7 @@ import {
     offset = 0,
   ): Promise<ChatSummaryResponse[]> {
     const r = await fetchWithAuth(
-      `${API_BASE_URL}/projects/${projectId}/chats?limit=${limit}&offset=${offset}`,
+      `${API_BASE_URL}/api/projects/${projectId}/chats?limit=${limit}&offset=${offset}`,
     );
     return (await handleResponse<ChatSummaryResponse[]>(r)) ?? [];
   }
@@ -169,7 +169,7 @@ import {
     projectId: string,
     data?: ChatCreateRequest,
   ): Promise<ChatSummaryResponse> {
-    const r = await fetchWithAuth(`${API_BASE_URL}/projects/${projectId}/chats`, {
+    const r = await fetchWithAuth(`${API_BASE_URL}/api/projects/${projectId}/chats`, {
       method: "POST",
       body: data ? JSON.stringify(data) : undefined,
     });
@@ -182,7 +182,7 @@ import {
     offset = 0,
   ): Promise<Message[]> {
     const r = await fetchWithAuth(
-      `${API_BASE_URL}/chats/${chatId}/history?limit=${limit}&offset=${offset}`,
+      `${API_BASE_URL}/api/chats/${chatId}/history?limit=${limit}&offset=${offset}`,
     );
     return (
       (await handleResponse<ChatHistoryResponse>(r))?.messages ?? []
@@ -190,7 +190,7 @@ import {
   }
 
   export async function deleteChat(projectId: string, chatId: string): Promise<void> {
-    await fetchWithAuth(`${API_BASE_URL}/projects/${projectId}/chats/${chatId}`, { method: "DELETE" });
+    await fetchWithAuth(`${API_BASE_URL}/api/projects/${projectId}/chats/${chatId}`, { method: "DELETE" });
   }
 
   // **Document endpoints** ---------------------------------------
@@ -204,7 +204,7 @@ import {
     if (projectId) form.append("project_id", projectId);
     form.append("is_global", String(isGlobal));
 
-    const r = await fetchWithAuth(`${API_BASE_URL}/documents`, {
+    const r = await fetchWithAuth(`${API_BASE_URL}/api/documents`, {
       method: "POST",
       body: form,
     });
@@ -215,7 +215,7 @@ import {
     projectId: string,
   ): Promise<ProjectDocumentsResponse> {
     const r = await fetchWithAuth(
-      `${API_BASE_URL}/projects/${projectId}/documents`,
+      `${API_BASE_URL}/api/projects/${projectId}/documents`,
     );
     return (
       (await handleResponse<ProjectDocumentsResponse>(r)) ?? {
@@ -226,7 +226,7 @@ import {
   }
 
   export async function deleteDocument(documentId: string): Promise<void> {
-    await fetchWithAuth(`${API_BASE_URL}/documents/${documentId}`, {
+    await fetchWithAuth(`${API_BASE_URL}/api/documents/${documentId}`, {
       method: "DELETE",
     });
   }
@@ -235,7 +235,7 @@ import {
     documentId: string,
   ): Promise<ProjectDocument | null> {
     const r = await fetchWithAuth(
-      `${API_BASE_URL}/documents/${documentId}`,
+      `${API_BASE_URL}/api/documents/${documentId}`,
     );
     return handleResponse<ProjectDocument | null>(r);
   }
@@ -245,7 +245,7 @@ import {
     content: string,
   ): Promise<ProjectDocument | null> {
     const r = await fetchWithAuth(
-      `${API_BASE_URL}/documents/${documentId}`,
+      `${API_BASE_URL}/api/documents/${documentId}`,
       {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -261,7 +261,7 @@ import {
     replaceEmbeddings: boolean = false,
   ): Promise<ProjectDocument | null> {
     const r = await fetchWithAuth(
-      `${API_BASE_URL}/documents/${documentId}/refine`,
+      `${API_BASE_URL}/api/documents/${documentId}/refine`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -273,7 +273,7 @@ import {
 
   // **LLM config** -----------------------------------------------
   export async function getLlmConfig(): Promise<LlmConfigResponse> {
-    const r = await fetchWithAuth(`${API_BASE_URL}/config/llm`);
+    const r = await fetchWithAuth(`${API_BASE_URL}/api/config/llm`);
     return handleResponse<LlmConfigResponse>(r);
   }
 
@@ -283,7 +283,7 @@ import {
     messageIndex: number,
   ): Promise<RefinementPayload> {
     const r = await fetchWithAuth(
-      `${API_BASE_URL}/chats/${chatId}/messages/${messageIndex}/refine`,
+      `${API_BASE_URL}/api/chats/${chatId}/messages/${messageIndex}/refine`,
       { method: "POST" },
     );
     return handleResponse<RefinementPayload>(r);
@@ -294,14 +294,14 @@ import {
     offset = 0,
   ): Promise<RefinementListResponse> {
     const r = await fetchWithAuth(
-      `${API_BASE_URL}/improvement/interactions?limit=${limit}&offset=${offset}`,
+      `${API_BASE_URL}/api/improvement/interactions?limit=${limit}&offset=${offset}`,
     );
     return handleResponse<RefinementListResponse>(r);
   }
 
   // **Model management** -----------------------------------------
   export async function listModels(): Promise<ModelListResponse> {
-    const r = await fetchWithAuth(`${API_BASE_URL}/models`);
+    const r = await fetchWithAuth(`${API_BASE_URL}/api/models`);
     return handleResponse<ModelListResponse>(r);
   }
 
@@ -309,7 +309,7 @@ import {
     modelId: string,
     force = false,
   ): Promise<{ message: string }> {
-    const r = await fetchWithAuth(`${API_BASE_URL}/models/download`, {
+    const r = await fetchWithAuth(`${API_BASE_URL}/api/models/download`, {
       method: "POST",
       body: JSON.stringify({ model_id: modelId, force_download: force }),
     });
@@ -319,7 +319,7 @@ import {
   export async function setActiveModel(
     modelId: string,
   ): Promise<{ message: string }> {
-    const r = await fetchWithAuth(`${API_BASE_URL}/models/set_active`, {
+    const r = await fetchWithAuth(`${API_BASE_URL}/api/models/set_active`, {
       method: "POST",
       body: JSON.stringify({ model_id: modelId }),
     });
@@ -327,8 +327,38 @@ import {
   }
 
   export async function getModelStatus(modelId: string): Promise<ModelStatus> {
-    const r = await fetchWithAuth(`${API_BASE_URL}/models/${modelId}/status`);
+    const r = await fetchWithAuth(`${API_BASE_URL}/api/models/${modelId}/status`);
     return handleResponse<ModelStatus>(r);
+  }
+
+  // **Vector DB management** -----------------------------------------
+  export interface VectorDbInfo {
+    id: string;
+    filename: string;
+    description?: string;
+    size_gb?: number;
+    status: "available" | "downloading" | "not_downloaded" | string;
+  }
+
+  export interface VectorDbListResponse {
+    available_vector_dbs: VectorDbInfo[];
+    active_db_id: string | null;
+  }
+
+  export async function listVectorDbs(): Promise<VectorDbListResponse> {
+    const r = await fetchWithAuth(`${API_BASE_URL}/api/vector-db`);
+    return handleResponse<VectorDbListResponse>(r);
+  }
+
+  export async function downloadVectorDb(
+    dbId: string,
+    force = false,
+  ): Promise<{ message: string }> {
+    const r = await fetchWithAuth(`${API_BASE_URL}/api/vector-db/download`, {
+      method: "POST",
+      body: JSON.stringify({ db_id: dbId, force_download: force }),
+    });
+    return handleResponse<{ message: string }>(r);
   }
 
   // **DEPRECATED Deliverable Endpoints** -------------------------
@@ -343,7 +373,7 @@ import {
     payload: any, // Replace 'any' with actual CXStrategyRequest from ../types/deliverables if keeping
   ): Promise<DeliverableResponse> {
     console.warn("generateProposal is deprecated. Use askQuestion with mode: \"document\".")
-    const r = await fetchWithAuth(`${API_BASE_URL}/cx-strategy`, {
+    const r = await fetchWithAuth(`${API_BASE_URL}/api/cx-strategy`, {
       method: "POST",
       body: JSON.stringify(payload),
     });
@@ -357,7 +387,7 @@ import {
     payload: any, // Replace 'any' with actual ROIAnalysisRequest from ../types/deliverables if keeping
   ): Promise<DeliverableResponse> {
     console.warn("generateRoiAnalysis is deprecated. Use askQuestion with mode: \"document\".")
-    const r = await fetchWithAuth(`${API_BASE_URL}/roi-analysis`, {
+    const r = await fetchWithAuth(`${API_BASE_URL}/api/roi-analysis`, {
       method: "POST",
       body: JSON.stringify(payload),
     });
@@ -371,7 +401,7 @@ import {
     payload: any, // Replace 'any' with actual JourneyMapRequest from ../types/deliverables if keeping
   ): Promise<DeliverableResponse> {
     console.warn("generateJourneyMap is deprecated. Use askQuestion with mode: \"document\".")
-    const r = await fetchWithAuth(`${API_BASE_URL}/journey-map`, {
+    const r = await fetchWithAuth(`${API_BASE_URL}/api/journey-map`, {
       method: "POST",
       body: JSON.stringify(payload),
     });
@@ -382,12 +412,55 @@ import {
   // Removed old inline AskRequestPayload and AskResponse interfaces
 
   export async function askQuestion(payload: QuestionRequest): Promise<QuestionResponse> {
-    const r = await fetchWithAuth(`${API_BASE_URL}/ask`, {
+    const r = await fetchWithAuth(`${API_BASE_URL}/api/ask`, {
       method: "POST",
       body: JSON.stringify(payload),
       // Using the default VERY_LONG_TIMEOUT_MS for RAG/Agent calls from fetchWithAuth
     });
     return handleResponse<QuestionResponse>(r);
+  }
+
+  // ---------------- LLM runtime status ----------------
+  export interface LlmRuntimeStatus {
+    configured_model_id: string | null;
+    configured_model_path: string | null;
+    backend: string | null;
+    loaded: boolean;
+    load_error?: string | null;
+  }
+
+  export async function getLlmRuntimeStatus(): Promise<LlmRuntimeStatus> {
+    const r = await fetchWithAuth(`${API_BASE_URL}/api/llm/status`);
+    return handleResponse<LlmRuntimeStatus>(r);
+  }
+
+  export interface LlmBackendUpdateRequest {
+    backend: string;
+    model_id?: string;
+    model_path?: string;
+  }
+
+  export interface AzureOpenAIConfigRequest {
+    endpoint: string;
+    api_key: string;
+    deployment: string;
+    api_version?: string;
+  }
+
+  export async function setLlmBackend(payload: LlmBackendUpdateRequest): Promise<{ message: string; backend: string }> {
+    const r = await fetchWithAuth(`${API_BASE_URL}/api/config/llm/backend`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    return handleResponse<{ message: string; backend: string }>(r);
+  }
+
+  export async function setAzureOpenAIConfig(payload: AzureOpenAIConfigRequest): Promise<{ message: string; backend: string }> {
+    const r = await fetchWithAuth(`${API_BASE_URL}/api/config/llm/azure`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    return handleResponse<{ message: string; backend: string }>(r);
   }
 
   // --------------------------------------------------------------

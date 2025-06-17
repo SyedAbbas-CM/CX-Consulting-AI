@@ -45,6 +45,7 @@ import {
   deleteProject,
 } from "../lib/apiClient";
 import { ProjectCreateRequest } from "../types/project";
+import { ChatCreateRequest } from "../types/chat";
 
 interface CollapsibleProjectSidebarProps {
   theme: "light" | "dark";
@@ -81,8 +82,12 @@ export default function CollapsibleProjectSidebar({ theme }: CollapsibleProjectS
   const [isCreatingChat, setIsCreatingChat] = useState(false);
   const [deletingChatId, setDeletingChatId] = useState<string | null>(null);
   const [showNewProjectDialog, setShowNewProjectDialog] = useState(false);
-  const [newProjectData, setNewProjectData] = useState<Partial<ProjectCreateRequest>>({});
+  const [newProjectData, setNewProjectData] = useState<{name?: string; industry?: string; description?: string; goals?: string}>({});
   const { toast } = useToast();
+
+  // New Chat (Journey) dialog state
+  const [showNewChatDialog, setShowNewChatDialog] = useState(false);
+  const [newChatData, setNewChatData] = useState<{name?: string; journey_type?: string}>({});
 
   // Load projects on mount
   useEffect(() => {
@@ -107,7 +112,15 @@ export default function CollapsibleProjectSidebar({ theme }: CollapsibleProjectS
     }
     setIsCreatingProject(true);
     try {
-      const project = await createProject({ name: newProjectData.name.trim() } as ProjectCreateRequest);
+      const payload = {
+        name: newProjectData.name!.trim(),
+        industry: newProjectData.industry?.trim() || undefined,
+        description: newProjectData.description?.trim() || "",
+        metadata: {
+          goals: newProjectData.goals?.split(/,\s*/) || undefined,
+        }
+      } as unknown as ProjectCreateRequest;
+      const project = await createProject(payload);
       addProject(project);
       setCurrentProjectId(project.id);
       setShowNewProjectDialog(false);
@@ -120,17 +133,33 @@ export default function CollapsibleProjectSidebar({ theme }: CollapsibleProjectS
     }
   };
 
-  // Create a new chat under the current project
-  const handleNewChat = async () => {
+  // Open New Chat Dialog
+  const openNewChatDialog = () => {
     if (!currentProjectId) {
       toast({ variant: "destructive", title: "No Project Selected", description: "Please select a project first." });
       return;
     }
+    setShowNewChatDialog(true);
+  };
+
+  // Handle New Chat Submit
+  const handleNewChatSubmit = async () => {
+    if (!currentProjectId) return;
+    if (!newChatData.name || !newChatData.name.trim()) {
+      toast({ variant: "destructive", title: "Name Required", description: "Please enter a name for the journey." });
+      return;
+    }
     setIsCreatingChat(true);
     try {
-      const chat = await createChat(currentProjectId);
+      const payload = {
+        name: newChatData.name.trim(),
+        journey_type: newChatData.journey_type?.trim() || undefined,
+      } as unknown as ChatCreateRequest;
+      const chat = await createChat(currentProjectId, payload);
       addChat(chat);
       setCurrentChatId(chat.chat_id);
+      setShowNewChatDialog(false);
+      setNewChatData({});
     } catch (err: any) {
       toast({ variant: "destructive", title: "Chat Creation Failed", description: err?.errorData?.detail || err?.message });
     } finally {
@@ -256,13 +285,13 @@ export default function CollapsibleProjectSidebar({ theme }: CollapsibleProjectS
 
       <div className="flex-1 flex flex-col overflow-hidden p-2">
         <Button
-          onClick={handleNewChat}
+          onClick={openNewChatDialog}
           disabled={!currentProjectId || isCreatingChat}
           className={`mb-2 w-full justify-center ${isCollapsed ? "p-0 h-9 w-9" : ""}`}
           title={isCollapsed ? "New Chat" : undefined}
         >
           {isCreatingChat ? <Loader2 className="animate-spin" /> : <PlusCircle />}
-          {!isCollapsed && <span className="ml-2">New Chat</span>}
+          {!isCollapsed && <span className="ml-2">New Journey</span>}
         </Button>
 
         {!isCollapsed && <hr className={`${theme === "dark" ? "border-gray-700" : "border-gray-300"} mb-2`} />}
@@ -286,13 +315,40 @@ export default function CollapsibleProjectSidebar({ theme }: CollapsibleProjectS
                     <DialogTitle>Create Project</DialogTitle>
                     <DialogDescription>Enter a name for the new project.</DialogDescription>
                   </DialogHeader>
-                  <div className="p-4">
-                    <div className="mb-2">
+                  <div className="p-4 space-y-3">
+                    <div>
                       <Label htmlFor="projectName">Name*</Label>
                       <Input
                         id="projectName"
                         value={newProjectData.name || ""}
-                        onChange={(e) => setNewProjectData({ name: e.target.value })}
+                        onChange={(e) => setNewProjectData({ ...newProjectData, name: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="industry">Industry</Label>
+                      <Input
+                        id="industry"
+                        placeholder="e.g. Retail, Banking"
+                        value={newProjectData.industry || ""}
+                        onChange={(e) => setNewProjectData({ ...newProjectData, industry: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="description">Description</Label>
+                      <Input
+                        id="description"
+                        placeholder="Short description"
+                        value={newProjectData.description || ""}
+                        onChange={(e) => setNewProjectData({ ...newProjectData, description: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="goals">Goals (comma-separated)</Label>
+                      <Input
+                        id="goals"
+                        placeholder="Improve NPS, reduce churn"
+                        value={newProjectData.goals || ""}
+                        onChange={(e) => setNewProjectData({ ...newProjectData, goals: e.target.value })}
                       />
                     </div>
                   </div>
@@ -313,6 +369,42 @@ export default function CollapsibleProjectSidebar({ theme }: CollapsibleProjectS
             </div>
           )}
         </ScrollArea>
+
+        {/* New Chat Dialog */}
+        <Dialog open={showNewChatDialog} onOpenChange={setShowNewChatDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create Journey</DialogTitle>
+              <DialogDescription>Fill details for the new customer journey.</DialogDescription>
+            </DialogHeader>
+            <div className="p-4 space-y-3">
+              <div>
+                <Label htmlFor="chatName">Name*</Label>
+                <Input
+                  id="chatName"
+                  value={newChatData.name || ""}
+                  onChange={e => setNewChatData({ ...newChatData, name: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="journeyType">Journey Type</Label>
+                <Input
+                  id="journeyType"
+                  placeholder="e.g. roi_analysis, interview_prep"
+                  value={newChatData.journey_type || ""}
+                  onChange={e => setNewChatData({ ...newChatData, journey_type: e.target.value })}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="secondary" onClick={() => setShowNewChatDialog(false)}>Cancel</Button>
+              <Button onClick={handleNewChatSubmit} disabled={isCreatingChat}>
+                {isCreatingChat ? <Loader2 className="animate-spin mr-2" size={16}/> : null}
+                Create Journey
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </aside>
   );
