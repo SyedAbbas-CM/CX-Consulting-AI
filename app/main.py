@@ -150,12 +150,17 @@ app.include_router(auth_router, prefix="/api/auth")
 # Include Upload router
 app.include_router(upload_router, prefix="/api", tags=["Document Upload"])
 
+from app.api.company_profiles import router as company_profiles_router
+
 # Include Deliverables router
 from app.api.deliverables import router as deliverables_router
 
 app.include_router(
     deliverables_router, prefix="/api/deliverables", tags=["Deliverables"]
 )
+
+# Include Company Profiles alias
+app.include_router(company_profiles_router, prefix="/api")
 
 
 # Define root endpoint

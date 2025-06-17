@@ -85,6 +85,9 @@ class LLMService:
         self.n_threads = self.settings.N_THREADS or os.cpu_count()
         self.chat_format = self.settings.CHAT_FORMAT
 
+        # Stores last load error if model failed to load (fail-soft mode)
+        self.load_error: Optional[Exception] = None
+
         # Create dedicated executor for LLM tasks (P2 / G1 / G2)
         self.llm_executor = ThreadPoolExecutor(
             max_workers=self.n_threads, thread_name_prefix="llm_worker"
@@ -94,7 +97,7 @@ class LLMService:
         )
 
         self._update_config_from_env()  # Load initial config from .env
-        self._load_model()  # Load the model based on initial config
+        self._load_model()  # Attempt to load the model based on initial config (may fail-soft)
 
     def _update_config_from_env(self):
         """Load or reload configuration from environment variables."""
@@ -235,7 +238,8 @@ class LLMService:
                     )
                 # Check 3: Resolve MODEL_ID using AVAILABLE_MODELS dictionary
                 elif self.model_id in AVAILABLE_MODELS:
-                    model_filename = AVAILABLE_MODELS[self.model_id].get("filename")
+                    model_meta = AVAILABLE_MODELS[self.model_id]
+                    model_filename = model_meta.get("filename")
                     if model_filename:
                         potential_path = os.path.join(MODELS_DIR, model_filename)
                         if os.path.exists(potential_path):
@@ -252,18 +256,49 @@ class LLMService:
                             f"MODEL_ID '{self.model_id}' found in config, but no filename specified."
                         )
 
+                # --- Optional safeguard: skip auto-loading ultra-large models ---
+                max_auto_gb_env = os.getenv("MAX_AUTO_MODEL_SIZE_GB", "8")
+                try:
+                    max_auto_gb = float(max_auto_gb_env)
+                except ValueError:
+                    max_auto_gb = 8.0
+
+                model_size_gb = None
+                if self.model_id in AVAILABLE_MODELS:
+                    model_size_gb = AVAILABLE_MODELS[self.model_id].get("size_gb")
+
+                if model_size_gb and model_size_gb > max_auto_gb:
+                    logger.warning(
+                        f"Skipping automatic load of model '{self.model_id}' (size {model_size_gb} GB) – exceeds MAX_AUTO_MODEL_SIZE_GB={max_auto_gb}."
+                    )
+                    model_file_to_load = None  # Ensure we don't try to load
+
                 # Check if we found a valid path
                 if not model_file_to_load:
-                    # Raise error only if no valid path could be determined at all
-                    raise ValueError(
-                        f"Could not determine a valid model file path for llama.cpp from MODEL_PATH='{self.model_path}' or MODEL_ID='{self.model_id}'"
+                    raise FileNotFoundError(
+                        f"No suitable local GGUF file found for MODEL_ID='{self.model_id}'. Backend will start without an LLM loaded."
                     )
 
                 logger.info(f"Loading llama.cpp model from: {model_file_to_load}")
+                # Allow overriding GPU layer count to avoid MPS out-of-memory
+                gpu_layers_env = os.getenv("N_GPU_LAYERS") or os.getenv(
+                    "LLAMA_N_GPU_LAYERS"
+                )
+                try:
+                    n_gpu_layers_val = (
+                        int(gpu_layers_env) if gpu_layers_env is not None else -1
+                    )
+                except ValueError:
+                    logger.warning(
+                        "Invalid N_GPU_LAYERS value '%s', falling back to -1 (all)",
+                        gpu_layers_env,
+                    )
+                    n_gpu_layers_val = -1
+
                 self.llm = Llama(
                     model_path=model_file_to_load,
                     n_ctx=self.max_model_len,
-                    n_gpu_layers=-1,
+                    n_gpu_layers=n_gpu_layers_val,
                     chat_format=self.chat_format,
                     verbose=settings.LLAMA_CPP_VERBOSE,
                     n_threads=self.n_threads,
@@ -295,18 +330,17 @@ class LLMService:
                 raise ValueError(f"Unsupported LLM backend: {self.backend}")
 
         except Exception as e:
+            # Fail-soft: record the error but let the application continue so that admins can download models later.
             logger.error(
-                f"Fatal error loading model with {self.backend} backend: {str(e)}",
+                f"Error loading model for backend {self.backend}: {e}. LLMService will remain inactive until a valid model is loaded.",
                 exc_info=True,
             )
-            # Set service to a non-functional state?
             self.llm = None
             self.tokenizer = None
             self.client = None
-            # Re-raise the exception to prevent the application from starting incorrectly
-            raise RuntimeError(
-                f"Failed to initialize LLMService backend {self.backend}"
-            ) from e
+            # Store last load error for diagnostics
+            self.load_error = e
+            return  # Do NOT raise to keep FastAPI running
 
     def reload_model(self, model_path: Optional[str] = None):
         """Reloads the LLM. Can load a specific model path or use latest .env config."""
@@ -596,7 +630,8 @@ class LLMService:
         downgrade_system = False
 
         # Check if system role needs downgrade (Checklist Item 3-D)
-        if "gemma" in (self.model_id or "").lower():
+        model_id_lower = (self.model_id or "").lower()
+        if "gemma" in model_id_lower or "granite" in model_id_lower:
             downgrade_system = True
 
         for msg in messages:
@@ -751,7 +786,36 @@ Is the Answer supported by the Context? Answer only YES or NO."""
 
     async def aclose(self):
         """Async cleanup method for shutdown event."""
-        self.free_resources()
+        await asyncio.get_running_loop().run_in_executor(
+            self.llm_executor, self.free_resources
+        )
+
+    # ------------------------------------------------------------------
+    # Status helper
+    # ------------------------------------------------------------------
+
+    def get_status(self) -> dict:
+        """Return a lightweight dict describing the LLM load state.
+
+        Keys returned:
+        configured_model_id – value from .env / last reload
+        configured_model_path – absolute or relative path configured
+        loaded – bool, True if the underlying self.llm object is non-None
+        load_error – str message of last exception (if any)
+        backend – backend string (llama.cpp / openai / …)
+        """
+        return {
+            "configured_model_id": self.model_id,
+            "configured_model_path": self.model_path,
+            "backend": self.backend,
+            "loaded": bool(getattr(self, "llm", None)),
+            "load_error": str(self.load_error) if self.load_error else None,
+        }
+
+    def reload_from_env(self):
+        """Reload configuration and model based on the current .env variables."""
+        self._update_config_from_env()
+        self._load_model()
 
 
 # Example instantiation (usually done via dependency injection)

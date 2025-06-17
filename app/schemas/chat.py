@@ -6,6 +6,11 @@ from pydantic import BaseModel, Field
 
 class ChatCreateRequest(BaseModel):
     name: Optional[str] = None  # Optional chat name
+    journey_type: Optional[str] = Field(
+        None,
+        description="Optional journey type (e.g., roi_analysis, interview_prep, journey_mapping)",
+        pattern="^[a-zA-Z0-9_\-]+$",
+    )
 
 
 class ChatSummaryResponse(BaseModel):

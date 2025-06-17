@@ -86,6 +86,53 @@ class AuthService:
             """
             )
 
+            # ------------------------------------------------------------------
+            # Seed default admin if no users exist yet
+            # ------------------------------------------------------------------
+            cursor.execute("SELECT COUNT(*) FROM users")
+            user_count = cursor.fetchone()[0]
+            if user_count == 0:
+                logger.info(
+                    "No users detected in freshly initialised DB – creating default admin user 'admin'."
+                )
+
+                default_username = "admin"
+                default_email = "admin@gmail.com"
+                default_password = "admin123"
+
+                try:
+                    hashed_pw = self._hash_password(default_password)
+                except Exception as e:
+                    logger.error("Failed to hash default password: %s", e)
+                    hashed_pw = default_password  # Fallback (NOT recommended – but avoids crash)
+
+                now_iso = datetime.utcnow().isoformat()
+                cursor.execute(
+                    """
+                    INSERT INTO users (
+                        id, username, email, hashed_password, full_name, company,
+                        is_active, is_admin, created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        str(uuid.uuid4()),
+                        default_username,
+                        default_email,
+                        hashed_pw,
+                        None,
+                        None,
+                        True,
+                        True,
+                        now_iso,
+                        now_iso,
+                    ),
+                )
+                logger.info(
+                    "Default admin user created – username: '%s' / password: '%s'",
+                    default_username,
+                    default_password,
+                )
+
             conn.commit()
             conn.close()
             logger.info("Database initialized successfully")
@@ -426,8 +473,23 @@ class AuthService:
         Returns:
             User data or None if authentication failed
         """
-        # Get user by username
+        # First, attempt to find by username (allows legacy behaviour)
         user = self.get_user_by_username(username)
+
+        # If not found and the supplied "username" looks like an email, try email lookup
+        if not user and "@" in username:
+            try:
+                conn = sqlite3.connect(self.db_path)
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                cursor.execute(
+                    "SELECT * FROM users WHERE email = ? AND is_active = 1", (username,)
+                )
+                user = cursor.fetchone()
+                conn.close()
+            except Exception as e:
+                logger.error("Error looking up user by email during auth: %s", e)
+
         if not user:
             return None
 

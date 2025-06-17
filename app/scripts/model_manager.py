@@ -38,27 +38,27 @@ os.makedirs(MODELS_DIR, exist_ok=True)
 # Updated list: Gemma 3 IT, Qwen3 Instruct, and Gemma 2B IT
 AVAILABLE_MODELS = {
     # --- Gemma Models ---
-    "gemma-2b-it": {
-        "repo_id": "google/gemma-2b-it",
-        "filename": "gemma-2b-it.Q4_K_M.gguf",
-        "url": "https://huggingface.co/TheBloke/gemma-2b-it-GGUF/resolve/main/gemma-2b-it.Q4_K_M.gguf",
-        "size_gb": 1.4,
-        "description": "Gemma 2B Instruct (Q4_K_M)",
+    "gemma-3-1b-it": {
+        "repo_id": "lmstudio-community/gemma-3-1B-it-qat-GGUF",
+        "filename": "gemma-3-1B-it-QAT-Q4_0.gguf",
+        "url": "https://huggingface.co/lmstudio-community/gemma-3-1B-it-qat-GGUF/resolve/main/gemma-3-1B-it-QAT-Q4_0.gguf",
+        "size_gb": 0.72,  # 720 MB Q4_0 quant
+        "description": "Gemma 3 1B Instruct QAT (Q4_0)",
         "type": "instruct",
     },
     "gemma-4b-it.q4_k_m.gguf": {
         "repo_id": "lmstudio-community/gemma-3-4b-it-GGUF",
-        "filename": "gemma-3b-it-im-q4_k_m.gguf",
-        "url": "https://huggingface.co/lmstudio-community/gemma-3-4b-it-GGUF/blob/resolve/gemma-3-4b-it-Q4_K_M.gguf",
-        "size_gb": 2.49,
-        "description": "Gemma 3B Instruct IM (Q4_K_M by lmstudio-community)",
+        "filename": "gemma-3-4b-it-Q4_K_M.gguf",
+        "url": "https://huggingface.co/lmstudio-community/gemma-3-4b-it-GGUF/resolve/main/gemma-3-4b-it-Q4_K_M.gguf",
+        "size_gb": 2.5,
+        "description": "Gemma 4B Instruct (Q4_K_M by lmstudio-community)",
         "type": "instruct",
     },
     "gemma-3-12b-it": {  # Using lmstudio-community QAT GGUF
-        "repo_id": "lmstudio-community/gemma-3-27B-it-qat-GGUF",
-        "filename": "gemma-3-27b-it-qat-q4_0.gguf",
+        "repo_id": "lmstudio-community/gemma-3-12B-it-qat-GGUF",
+        "filename": "gemma-3-12B-it-QAT-Q4_0.gguf",
         "url": "https://huggingface.co/lmstudio-community/gemma-3-12B-it-qat-GGUF/resolve/main/gemma-3-12B-it-QAT-Q4_0.gguf",
-        "size_gb": 6.89,
+        "size_gb": 6.9,
         "description": "Gemma 3 12B Instruct QAT (Q4_0 by lmstudio-community)",
         "type": "instruct",
     },
@@ -93,6 +93,15 @@ AVAILABLE_MODELS = {
         "url": "https://huggingface.co/lmstudio-community/Qwen3-32B-GGUF/resolve/main/Qwen3-32B-Q4_K_M.gguf",
         "size_gb": 19.8,
         "description": "Qwen3 32B Instruct (Q4_K_M by lmstudio-community)",
+        "type": "instruct",
+    },
+    # --- IBM Granite ---
+    "granite-8b-code-instruct": {
+        "repo_id": "ibm-granite/granite-8b-code-instruct-4k-GGUF",
+        "filename": "granite-8b-code-instruct.Q4_K_M.gguf",
+        "url": "https://huggingface.co/ibm-granite/granite-8b-code-instruct-4k-GGUF/resolve/main/granite-8b-code-instruct.Q4_K_M.gguf",
+        "size_gb": 4.9,
+        "description": "IBM Granite 8B Code Instruct (Q4_K_M)",
         "type": "instruct",
     },
 }
@@ -561,7 +570,16 @@ def download_model(model_id, force=False, mirror=DEFAULT_MIRROR):
 
     try:
         logger.info(f"Starting download: {model_id} from {download_url}")
-        response = requests.get(download_url, stream=True, timeout=30)
+
+        # Include HuggingFace auth token if provided in environment to avoid 401 errors on gated models
+        auth_token = os.getenv("HF_AUTH_TOKEN") or os.getenv("HUGGINGFACE_HUB_TOKEN")
+        request_headers = (
+            {"Authorization": f"Bearer {auth_token}"} if auth_token else {}
+        )
+
+        response = requests.get(
+            download_url, headers=request_headers, stream=True, timeout=30
+        )
         response.raise_for_status()
 
         total_size = int(response.headers.get("content-length", 0))
@@ -571,6 +589,9 @@ def download_model(model_id, force=False, mirror=DEFAULT_MIRROR):
         headers = {}
         if resume_size > 0:
             headers["Range"] = f"bytes={resume_size}-"
+            # Re-issue with token too
+            if auth_token:
+                headers["Authorization"] = f"Bearer {auth_token}"
             # Re-request with range header
             response = requests.get(
                 download_url, headers=headers, stream=True, timeout=30
@@ -583,7 +604,9 @@ def download_model(model_id, force=False, mirror=DEFAULT_MIRROR):
                 )
                 resume_size = 0
                 # Re-request without range
-                response = requests.get(download_url, stream=True, timeout=30)
+                response = requests.get(
+                    download_url, headers=request_headers, stream=True, timeout=30
+                )
                 response.raise_for_status()
                 total_size = int(response.headers.get("content-length", 0))
             else:
@@ -911,10 +934,25 @@ def get_model_status(model_id):
         if pid and _is_pid_running(pid):
             # Process is actively running
             elapsed_time = time.time() - lock_data.get("start_time", time.time())
+            # Calculate progress percentage if we can detect partial file size
+            progress_pct = None
+            if temp_path.exists() and model_info.get("size_gb"):
+                try:
+                    downloaded_bytes = temp_path.stat().st_size
+                    total_bytes = int(model_info["size_gb"] * 1024 * 1024 * 1024)
+                    progress_pct = min(100.0, (downloaded_bytes / total_bytes) * 100)
+                except Exception:
+                    progress_pct = None
+
             return {
                 "status": "downloading",
                 "message": f"Download in progress (PID: {pid}, Running for {elapsed_time:.0f}s)",
                 "pid": pid,
+                **(
+                    {"download_progress": round(progress_pct, 2)}
+                    if progress_pct is not None
+                    else {}
+                ),
             }
         else:
             # Lock file exists, but PID is invalid or not running (Stale lock)
@@ -957,10 +995,25 @@ def get_model_status(model_id):
 
     # 3. Check partial file (implies failed/interrupted download because no lock file)
     if temp_path.exists():
+        # Calculate partial progress to allow resumption indicator
+        progress_pct = None
+        if model_info.get("size_gb"):
+            try:
+                downloaded_bytes = temp_path.stat().st_size
+                total_bytes = int(model_info["size_gb"] * 1024 * 1024 * 1024)
+                progress_pct = min(100.0, (downloaded_bytes / total_bytes) * 100)
+            except Exception:
+                progress_pct = None
+
         return {
             "status": "download_failed",
             "message": "Partial download file exists, but download is not active (no lock file).",
             "path": str(temp_path),
+            **(
+                {"download_progress": round(progress_pct, 2)}
+                if progress_pct is not None
+                else {}
+            ),
         }
 
     # 4. Not found / Not available (no lock, no final, no partial)

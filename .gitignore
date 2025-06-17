@@ -98,3 +98,24 @@ cx_consulting_ai_complete_*
 models/*.gguf
 app/data/vectorstore.zip
 app/data/vectorstore.zip
+
+# Model backups or alternatives
+modelsbackup/
+*.bak.gguf
+
+# Vector DB archives / backups
+app/data/vectorstore*.zip
+app/data/vectorstore*.tar.gz
+app/data/vectorstore_backup/
+
+# Global knowledge PDFs and other large docs
+data/global_docs/
+*.pdf
+*.pptx
+*.docx
+
+# Vector DB archive bundles
+app/data/vectorstore_archives/
+
+# Any timestamped vectorstore backups
+app/data/vectorstore_backup*/

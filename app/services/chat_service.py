@@ -63,6 +63,7 @@ class ChatService:
         user_id: str,
         project_id: Optional[str] = None,
         chat_name: Optional[str] = None,
+        journey_type: Optional[str] = None,
     ) -> Dict[str, Any]:
         chat_id = str(uuid.uuid4())
         now_iso = datetime.now(timezone.utc).isoformat()
@@ -78,6 +79,8 @@ class ChatService:
             "created_at": now_iso,
             "last_updated": now_iso,
         }
+        if journey_type:
+            metadata["journey_type"] = journey_type
 
         try:
             async with self.redis_client.pipeline(transaction=True) as pipe:

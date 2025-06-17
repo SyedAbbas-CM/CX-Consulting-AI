@@ -331,6 +331,36 @@ import {
     return handleResponse<ModelStatus>(r);
   }
 
+  // **Vector DB management** -----------------------------------------
+  export interface VectorDbInfo {
+    id: string;
+    filename: string;
+    description?: string;
+    size_gb?: number;
+    status: "available" | "downloading" | "not_downloaded" | string;
+  }
+
+  export interface VectorDbListResponse {
+    available_vector_dbs: VectorDbInfo[];
+    active_db_id: string | null;
+  }
+
+  export async function listVectorDbs(): Promise<VectorDbListResponse> {
+    const r = await fetchWithAuth(`${API_BASE_URL}/api/vector-db`);
+    return handleResponse<VectorDbListResponse>(r);
+  }
+
+  export async function downloadVectorDb(
+    dbId: string,
+    force = false,
+  ): Promise<{ message: string }> {
+    const r = await fetchWithAuth(`${API_BASE_URL}/api/vector-db/download`, {
+      method: "POST",
+      body: JSON.stringify({ db_id: dbId, force_download: force }),
+    });
+    return handleResponse<{ message: string }>(r);
+  }
+
   // **DEPRECATED Deliverable Endpoints** -------------------------
   // These functions call the old dedicated endpoints.
   // For new UI flows generating deliverables via chat/modal,
@@ -388,6 +418,49 @@ import {
       // Using the default VERY_LONG_TIMEOUT_MS for RAG/Agent calls from fetchWithAuth
     });
     return handleResponse<QuestionResponse>(r);
+  }
+
+  // ---------------- LLM runtime status ----------------
+  export interface LlmRuntimeStatus {
+    configured_model_id: string | null;
+    configured_model_path: string | null;
+    backend: string | null;
+    loaded: boolean;
+    load_error?: string | null;
+  }
+
+  export async function getLlmRuntimeStatus(): Promise<LlmRuntimeStatus> {
+    const r = await fetchWithAuth(`${API_BASE_URL}/api/llm/status`);
+    return handleResponse<LlmRuntimeStatus>(r);
+  }
+
+  export interface LlmBackendUpdateRequest {
+    backend: string;
+    model_id?: string;
+    model_path?: string;
+  }
+
+  export interface AzureOpenAIConfigRequest {
+    endpoint: string;
+    api_key: string;
+    deployment: string;
+    api_version?: string;
+  }
+
+  export async function setLlmBackend(payload: LlmBackendUpdateRequest): Promise<{ message: string; backend: string }> {
+    const r = await fetchWithAuth(`${API_BASE_URL}/api/config/llm/backend`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    return handleResponse<{ message: string; backend: string }>(r);
+  }
+
+  export async function setAzureOpenAIConfig(payload: AzureOpenAIConfigRequest): Promise<{ message: string; backend: string }> {
+    const r = await fetchWithAuth(`${API_BASE_URL}/api/config/llm/azure`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    return handleResponse<{ message: string; backend: string }>(r);
   }
 
   // --------------------------------------------------------------
